@@ -20,4 +20,6 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-scan(Input, Output) :-  split_string(Input," ","",OutString), maplist(atom_string,Output,OutString).
+scan("",[]).
+scan(Input, Output) :-  string(Input),split_string(Input," ","",OutString), maplist(atom_string,Output,OutString);
+						writeln("Bitte String eingeben"),false.
