@@ -4,14 +4,17 @@
 % purpose: top executable for MG LC-Parser
 
 :- ['helpers/painter'].
+:- ['helpers/extermination'].
 :- ['scanner'].
 
+:- op(500, xfy, ::). % infix predicate for lexical items
+:- op(500, fx, =). % for selection features
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Verwendetes Lexikon für das Parsen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-:-['grammars/naus'].
+:-['grammars/maus'].
 
-
+:-exterminate.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Hauptfunktion des Parsers
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
