@@ -26,9 +26,11 @@ debugMode:- false.
 
 exterminate :- 	setof(li([W],FsW,(FsW,[[]])),([W]::FsW),EtaLi),findall(epsLi(FsE,clean),([]::FsE),EpsLi),	% get all Li from the Lexicon and build new forms for them
 				combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi),	% 1. step of extermination
-				createChains(EtaLi,[],MarkEpsLi,NewEtaLi,[],NewChains,NewMarkEps,NewHist),% hier weitermachen % 2-4. step of extermination
 				(debugMode -> writeln("Eta: " + EtaLi),writeln("Epsilon: " + EpsLi),writeln("New Eta: " + CFeatEtaLi),writeln("New Epsilon: " + MarkEpsLi);true),
-				(debugMode -> length(EtaLi,Leta),length(CFeatEtaLi,LNewEta), write("#Eta: "), write(Leta),write( " #NewEta: "), writeln( LNewEta);true).
+				(debugMode -> length(EtaLi,Leta),length(CFeatEtaLi,LNewEta), write("#Eta: "), write(Leta),write( " #NewEta: "), writeln( LNewEta);true),
+				createChains(EtaLi,[],MarkEpsLi,[],NewEtaLi,NewChains,NewMarkEps,NewHist),% hier weitermachen % 2-4. step of extermination
+				(debugMode -> write("Chains: "), writeln(NewChains);true),
+				(debugMode ->length(NewChains,LChains),write("#Chains: "),writeln(LChains);true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -179,18 +181,21 @@ addHistory([HeadList|RestList],[EpsLi],[NewHeadList|NewRestList]):- append(HeadL
 %				b2. If no, keep it 
 %			c. Save the original Feature-list of the eta-Li and add the used epsilon-Li to the list of epsilon-Lis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-createChains([],[],EpsLi,ChainHist,[],[],EpsLi).
-createChains([EtaHead|EtaRest],[],EpsLis,ChainHist,NewEtaLis,NewChains,NewEpsLis,NewHist):- checkEtaEpsChain(EtaHead,EpsLis,FitEpsLis,NoFitEpsLis),	% 4.Step -> Case without chains present 
+createChains([],[],EpsLi,ChainHist,[],[],EpsLi,ChainHist).
+createChains([EtaHead|EtaRest],[],EpsLis,ChainHist,NewEtaLis,[NewChains|DeeperChains],NewEpsLis,NewHist):- checkEtaEpsChain(EtaHead,EpsLis,FitEpsLis,NoFitEpsLis),	% 4.Step -> Case without chains present 
 																					 			 buildNewChain(EtaHead,FitEpsLis,EtaHeadChains), append(FitEpsLis,NoFitEpsLis,MarkedEpsLis),
 																								 createChains(EtaRest,[],MarkedEpsLis,ChainHist,NewEtaLis,DeeperChains,NewEpsLis,DeeperChainHist), % recursion
+																								 (debugMode ->write("Possible new Chain: "),writeln(EtaHeadChains);true),
+																								 (debugMode ->write("Our History: "),writeln(DeeperChainHist) ;true),
 																								 compHistory(EtaHeadChains,DeeperChainHist,NewChains,NewHist).
-createChains(EtaLis,Chains,EpsLis,ChainHist,NewEtaLis,NewChains,NewEpsLis,NewChainHist). % hier weiter machen % 2.Step -> Case with chains present
+%createChains(EtaLis,Chains,EpsLis,ChainHist,NewEtaLis,NewChains,NewEpsLis,NewChainHist). % hier weiter machen % 2.Step -> Case with chains present
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkEtaEpsChain(+Eta_Li,+[Epsilon_Lis],-[Fitting_Eps_Lis],-[Non_Fitting_EpsLis])
 %
 %	seperates the epsilon-Lis into those that may result in a chain and those that do not
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkEtaEpsChain(_,[],[],[]).
 checkEtaEpsChain(li(_,FsW,_),[epsLi(FsE,Mark)|EpsRest],FitEpsLis,NoFitEpsLis):- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,_),
 																				( matchFeatures(PFsE,NFsW,_,nonempty) -> FitEpsLis = [epsLi(FsE,Mark)|RestFitEps],NoFitEpsLis = RestNoFitEps
 																				; FitEpsLis = RestFitEps, NoFitEpsLis = [epsLi(FsE,Mark)|RestNoFitEps]),
@@ -204,7 +209,7 @@ checkEtaEpsChain(li(_,FsW,_),[epsLi(FsE,Mark)|EpsRest],FitEpsLis,NoFitEpsLis):- 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 buildNewChain(_,[],[]).
 buildNewChain(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,Mark)|EpsRest],EtaChains):- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,NFsE), matchFeatures(PFsE,NFsW,RFsW,nonempty),
-																				   EtaChains = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),[epsLi(FsE,Mark)])|RestChain],
+																				   EtaChains = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),[epsChainLi([W],(FsE,Mark))])|RestChain],
 																				   buildNewChain(li([W],FsW,(FsH,EpsHist)),EpsRest,RestChain).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -216,10 +221,10 @@ buildNewChain(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,Mark)|EpsRest],EtaChains):- s
 matchFeatures([],[],_,empty).
 matchFeatures([],[F|Fs],[F|Fs],nonempty).
 matchFeatures(_,[],[],empty).
-matchFeatures([+A|RPos],[-A|RNeg],Stat,OutNeg):- matchFeatures(RPos,RNeg,Stat);true.
-matchFeatures([=A|RPos],[ A|RNeg],Stat):- matchFeatures(RPos,RNeg,Stat);true.
-matchFeatures([+A|RPos],[-B|RNeg],_,_):- false.
-matchFeatures([=A|RPos],[ B|RNeg],_,_):- false.
+matchFeatures([+A|RPos],[-A|RNeg],OutNeg,Stat):- matchFeatures(RPos,RNeg,OutNeg,Stat);true.
+matchFeatures([=A|RPos],[ A|RNeg],OutNeg,Stat):- matchFeatures(RPos,RNeg,OutNeg,Stat);true.
+matchFeatures([+_|_],[-_|_],_,_):- false.
+matchFeatures([=_|_],[ _|_],_,_):- false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % compHistory(+[Eta_Chains],+[Eta_Chain_Hist],-[New_Chains],-[New_Chain_Hist])
@@ -230,6 +235,8 @@ matchFeatures([=A|RPos],[ B|RNeg],_,_):- false.
 compHistory([],ChainHist,[],ChainHist).
 compHistory([chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|RestChain],ChainHist,NewChain,NewChainHist):- 
 										member(ChainItemHist,ChainHist), % did that epsilon combination already occur?
+										(debugMode -> writeln("Found match. Add Nothing."),writeln(ChainItemHist),writeln(ChainHist);true),
 										compHistory(RestChain,ChainHist,NewChain,NewChainHist); 								% yes -> discard chain and check rest
-										NewChain = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|NewRestChain], 	% no -> add chain and check rest
-										compHistory(RestChain,[[epsLi(FsE,Mark)]|ChainHist],NewRestChain,NewChainHist).
+										NewChain = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|NewRestChain], 		% no -> add chain and check rest
+										(debugMode -> write("Found no match. New Chain: "),writeln(NewChain);true),
+										compHistory(RestChain,[ChainItemHist|ChainHist],NewRestChain,NewChainHist).
