@@ -1,3 +1,4 @@
+:- module(extermination,[exterminate/0]).
 % file: extermination.pl
 % origin author : J. Kuhn
 % origin date: April 2023
@@ -24,9 +25,10 @@ debugMode:- false.
 
 
 exterminate :- 	setof(li([W],FsW,(FsW,[[]])),([W]::FsW),EtaLi),findall(epsLi(FsE,clean),([]::FsE),EpsLi),	% get all Li from the Lexicon and build new forms for them
-				combFeatures(EtaLi,EpsLi,NewEtaLi,MarkEpsLi),	% 1. step of extermination
-				(debugMode -> length(EtaLi,Leta),length(NewEtaLi,LNewEta), write("#Eta: "), write(Leta),write( " #NewEta: "), writeln( LNewEta)),
-				(debugMode -> writeln("Eta: " + EtaLi),writeln("Epsilon: " + EpsLi),writeln("New Eta: " + NewEtaLi),writeln("New Epsilon: " + MarkEpsLi);true).
+				combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi),	% 1. step of extermination
+				createChains(EtaLi,[],MarkEpsLi,NewEtaLi,[],NewChains,NewMarkEps,NewHist),% hier weitermachen % 2-4. step of extermination
+				(debugMode -> writeln("Eta: " + EtaLi),writeln("Epsilon: " + EpsLi),writeln("New Eta: " + CFeatEtaLi),writeln("New Epsilon: " + MarkEpsLi);true),
+				(debugMode -> length(EtaLi,Leta),length(CFeatEtaLi,LNewEta), write("#Eta: "), write(Leta),write( " #NewEta: "), writeln( LNewEta);true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -41,7 +43,7 @@ exterminate :- 	setof(li([W],FsW,(FsW,[[]])),([W]::FsW),EtaLi),findall(epsLi(FsE
 %	 1. step epsilon-extermination:
 %		Combine all negative Features of an eta-Li with all positive Feature of a all possible epsilon-Li, such that all Features match in order
 %			a. Create thus a new eta-Li with the exponent and the positive Features of the original eta-Li and the neagitve Features of the used epsilon-Li, If it does not already exists
-%			b. Save the original Feature-list of the eta-Li and add the used epsilon-Li to the lsit of epsilon-Lis
+%			b. Save the original Feature-list of the eta-Li and add the used epsilon-Li to the list of epsilon-Lis
 %			c. Mark the used epsilon-Li in the list of epsilon-Lis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 combFeatures(EtaLi,[],EtaLi,[]).
@@ -148,17 +150,86 @@ addHistory([HeadList|RestList],[EpsLi],[NewHeadList|NewRestList]):- append(HeadL
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% 2. Step after here
+% 2-4. Step after here
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% matchFeatures(+pos_Feature,+neg_Feature)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% createChains(+[EtaLi],+[OldChains],+[MarkEpsLi],+[Tried_epsilon_Chains],-[NewEtaLi],-[NewChains],-[NewMarkEps],-[NewHist])
 %
-% 	This function gives checks, if the feature match or not
+%	top level function of the fourth step
+%
+%	 2. Try to combine Epsilon-Lis with old chains, such that at least one feature from the eta chain item is matched in order and all positive features of the new epsilon-Li
+%			a. If all features of the eta chain item are matched, create a new eta-Li like in step 1.
+%			b. check if the newly created eta-Li is truly new.
+%				b1. If no, delete it and save the epslion history with the old one
+%				b2. If yes, save it
+%			c. Mark the used epsilon-List
+%			d. If not all features of the eta chain item are matched, check wether the combination of epsilon-Li has already been tried.
+%				d1. If yes, delete the chain
+%				d2. If no, create a new chain like in step 4.
+%	 3. Delete all chains that were not created in this round. Check if the combination of epsilon-Lis of the deleted chains are already recorded
+%			a. if no, add them to the recording.
+%			b. if yes, disregard them.
+%	 4. step epsilon-extermination:
+%		Combine in order the first m negative Features of an eta-Li with all positive Features of all posible epsilon-Lis, such that only negative features of the eta-Li remain.
+%			a. Create a Chain with the head being the negative Features of the epsilon-Li and the next item being the eta-Li with its remaining negative features
+%			b. check if the thus created chained has already been unsuccesfully tried.
+%				b1. If yes, delete the new Chain
+%				b2. If no, keep it 
+%			c. Save the original Feature-list of the eta-Li and add the used epsilon-Li to the list of epsilon-Lis
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+createChains([],[],EpsLi,ChainHist,[],[],EpsLi).
+createChains([EtaHead|EtaRest],[],EpsLis,ChainHist,NewEtaLis,NewChains,NewEpsLis,NewHist):- checkEtaEpsChain(EtaHead,EpsLis,FitEpsLis,NoFitEpsLis),	% 4.Step -> Case without chains present 
+																					 			 buildNewChain(EtaHead,FitEpsLis,EtaHeadChains), append(FitEpsLis,NoFitEpsLis,MarkedEpsLis),
+																								 createChains(EtaRest,[],MarkedEpsLis,ChainHist,NewEtaLis,DeeperChains,NewEpsLis,DeeperChainHist), % recursion
+																								 compHistory(EtaHeadChains,DeeperChainHist,NewChains,NewHist).
+createChains(EtaLis,Chains,EpsLis,ChainHist,NewEtaLis,NewChains,NewEpsLis,NewChainHist). % hier weiter machen % 2.Step -> Case with chains present
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% checkEtaEpsChain(+Eta_Li,+[Epsilon_Lis],-[Fitting_Eps_Lis],-[Non_Fitting_EpsLis])
+%
+%	seperates the epsilon-Lis into those that may result in a chain and those that do not
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkEtaEpsChain(li(_,FsW,_),[epsLi(FsE,Mark)|EpsRest],FitEpsLis,NoFitEpsLis):- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,_),
+																				( matchFeatures(PFsE,NFsW,_,nonempty) -> FitEpsLis = [epsLi(FsE,Mark)|RestFitEps],NoFitEpsLis = RestNoFitEps
+																				; FitEpsLis = RestFitEps, NoFitEpsLis = [epsLi(FsE,Mark)|RestNoFitEps]),
+																				checkEtaEpsChain(li(_,FsW,_),EpsRest,RestFitEps,RestNoFitEps).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% buildNewChain(+Eta_Li,+[Epsilon_Lis],-[Eta_Chains])
+%
+%	builds a chain from the eta-Li and all possible epsilon-Li
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+buildNewChain(_,[],[]).
+buildNewChain(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,Mark)|EpsRest],EtaChains):- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,NFsE), matchFeatures(PFsE,NFsW,RFsW,nonempty),
+																				   EtaChains = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),[epsLi(FsE,Mark)])|RestChain],
+																				   buildNewChain(li([W],FsW,(FsH,EpsHist)),EpsRest,RestChain).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-matchFeatures(+A,-A).
-matchFeatures(-A,+A).
-matchFeatures(=A, A).
-matchFeatures( A, =A).
-matchFeatures(_,_):-false.
+% matchFeatures(+[pos_Feature],+[neg_Feature],-[Remain_Neg_Feat],-Empty_Status)
+%
+% 	This function checks, if two feature list match not compleatly
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+matchFeatures([],[],_,empty).
+matchFeatures([],[F|Fs],[F|Fs],nonempty).
+matchFeatures(_,[],[],empty).
+matchFeatures([+A|RPos],[-A|RNeg],Stat,OutNeg):- matchFeatures(RPos,RNeg,Stat);true.
+matchFeatures([=A|RPos],[ A|RNeg],Stat):- matchFeatures(RPos,RNeg,Stat);true.
+matchFeatures([+A|RPos],[-B|RNeg],_,_):- false.
+matchFeatures([=A|RPos],[ B|RNeg],_,_):- false.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% compHistory(+[Eta_Chains],+[Eta_Chain_Hist],-[New_Chains],-[New_Chain_Hist])
+%
+%	Compares eta-chain-items to known epsilon-combinations
+%	If it is new, add the chain and add to the history]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+compHistory([],ChainHist,[],ChainHist).
+compHistory([chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|RestChain],ChainHist,NewChain,NewChainHist):- 
+										member(ChainItemHist,ChainHist), % did that epsilon combination already occur?
+										compHistory(RestChain,ChainHist,NewChain,NewChainHist); 								% yes -> discard chain and check rest
+										NewChain = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|NewRestChain], 	% no -> add chain and check rest
+										compHistory(RestChain,[[epsLi(FsE,Mark)]|ChainHist],NewRestChain,NewChainHist).
