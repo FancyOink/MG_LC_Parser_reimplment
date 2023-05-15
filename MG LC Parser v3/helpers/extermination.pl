@@ -204,7 +204,7 @@ createChains([EtaHead|EtaRest],[],EpsLis,ChainHist,NewEtaLis,OutChains,NewEpsLis
 checkEtaEpsChain(_,[],[],[]).
 checkEtaEpsChain(li(_,FsW,_),[epsLi(FsE,Mark)|EpsRest],FitEpsLis,NoFitEpsLis):- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,_),
 																				checkEtaEpsChain(li(_,FsW,_),EpsRest,RestFitEps,RestNoFitEps),
-																				( matchPartFeatures(PFsE,NFsW,nonempty) -> FitEpsLis = [epsLi(FsE,Mark)|RestFitEps],NoFitEpsLis = RestNoFitEps
+																				( ((PFsE \= []),matchPartFeatures(PFsE,NFsW,nonempty)) -> FitEpsLis = [epsLi(FsE,Mark)|RestFitEps],NoFitEpsLis = RestNoFitEps
 																				; FitEpsLis = RestFitEps, NoFitEpsLis = [epsLi(FsE,Mark)|RestNoFitEps]).
 
 
@@ -222,13 +222,13 @@ buildNewChain(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,_)|EpsRest],EtaChains):- spli
 % matchPartFeatures(+[pos_Feature],+[neg_Feature],-[Remain_Neg_Feat],-Empty_Status)
 %
 % 	This function checks, if two feature list match only in part 
-% Muss überarbeitet werden. Ist noch zu unsauber. Vieleicht macht die Funktion zu viel auf einmal? <- Hier weitermachen
+% 	Funltioniert zwar, macht aber uU zu viele Sachen auch einmal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 matchPartFeatures([],[],empty):- false.
 matchPartFeatures([],[_|_],nonempty).
 matchPartFeatures(_,[],empty):- false.
-matchPartFeatures([+A|RPos],[-A|RNeg],Stat):- matchPartFeatures(RPos,RNeg,Stat).%,(debugMode -> write("Been here: "),writeln(Stat);true).
-matchPartFeatures([=A|RPos],[ A|RNeg],Stat):- matchPartFeatures(RPos,RNeg,Stat).%,(debugMode -> write("Been here: "),writeln(Stat);true).
+matchPartFeatures([+A|RPos],[-A|RNeg],nonempty):- matchPartFeatures(RPos,RNeg,nonempty).%,((Stat1 == bottom) -> Stat = nonempty).%,(debugMode -> write("Been here: "),writeln(Stat);true).
+matchPartFeatures([=A|RPos],[ A|RNeg],nonempty):- matchPartFeatures(RPos,RNeg,nonempty).%,((Stat1 == bottom) -> Stat = nonempty).%,(debugMode -> write("Been here: "),writeln(Stat);true).
 matchPartFeatures(_,_,empty):- false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
