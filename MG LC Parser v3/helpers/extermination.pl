@@ -31,30 +31,41 @@ debugMode:- false.
 % Später einen Rückgabewert hinzufügen, der die Liste an Li ist, die in dieser Funktion erstellt wurden.
 % Die Liste soll dann in der Main-Fkt. mit assert "festgesetzt" werden. -> Sonst unständliche Form der Einträge, wegen Modul.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-exterminate(NewEtaLi) :- 	setof(li([W],FsW,(FsW,[[]])),([W]::FsW),EtaLi),findall(epsLi(FsE,clean),([]::FsE),EpsLi),	% get all Li from the Lexicon and build new forms for them
-				combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi),	% 1. step of extermination (Initial round)
-				(debugMode -> writeln("Eta: " + EtaLi),writeln("Epsilon: " + EpsLi),writeln("New Eta: " + CFeatEtaLi),writeln("New Epsilon: " + MarkEpsLi);true),
-				createChains(EtaLi,[],MarkEpsLi,[],[],NewChains,NewMarkEps,NewHist), % 4. step of extermination (Initial round)
-				(debugMode -> write("Chains: "), writeln(NewChains);true),
-				length(EtaLi,Leta),length(CFeatEtaLi,LNewEta),length(NewChains,LChains),
-				(debugMode ->write("#Eta: "), write(Leta),write(" #NewEta: "), writeln( LNewEta);true),
-				(debugMode ->write("#Chains: "),writeln(LChains);true),
-				( ((Leta < LNewEta);(LChains > 0)) -> loopExtermination(CFeatEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi),NewEtaLi = [NewEtaLiDeep|[ReEpsLi]]% 5. Step of extermination (Initial round) + Loop
-				; NewEtaLi = [EtaLi|[EpsLi]]). % 6.Step (Initial round)
+exterminate(NewEtaLi) :- 	
+			setof(li([W],FsW,(FsW,[[]])),([W]::FsW),EtaLi),findall(epsLi(FsE,clean),([]::FsE),EpsLi),	% get all Li from the Lexicon and build new forms for them
+			combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi),	% 1. step of extermination (Initial round)
+			(debugMode -> writeln("Eta: " + EtaLi),writeln("Epsilon: " + EpsLi),writeln("New Eta: " + CFeatEtaLi),writeln("New Epsilon: " + MarkEpsLi);true),
+			createChains(EtaLi,[],MarkEpsLi,[],[],NewChains,NewMarkEps,NewHist), % 4. step of extermination (Initial round)
+			(debugMode -> write("Chains: "), writeln(NewChains);true),
+			length(EtaLi,Leta),length(CFeatEtaLi,LNewEta),length(NewChains,LChains),
+			(debugMode ->write("#Eta: "), write(Leta),write(" #NewEta: "), writeln( LNewEta);true),
+			(debugMode ->write("#Chains: "),writeln(LChains);true),
+			( ((Leta < LNewEta);(LChains > 0)) -> loopExtermination(CFeatEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi),NewEtaLi = [NewEtaLiDeep|[ReEpsLi]]% 5. Step of extermination (Initial round) + Loop
+			; (debugMode -> writeln("No loop!");true)
+			, NewEtaLi = [EtaLi|[EpsLi]]). % 6.Step (Initial round)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % loopExtermination(+[EtaLis],+[Chains],+[EpsLis],+[ChainHist],-[EtaLis],-[EpsLi])
-%
+%	TODO: Herkunft erzeugung Duplikate nachvollziehen und beheben
 %	loop function of the extermination algorithm
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 loopExtermination(EtaLi,Chains,EpsLi,Hist,NewEtaLi,NewEpsLi):-
-				combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi), %	1. step 
-				createChains(EtaLi,Chains,MarkEpsLi,Hist,ChainsEtaLi,DeeperChains,DeeperEps,DeeperHist), % 2-3.step
-				append(EtaLi,[CFeatEtaLi|[ChainsEtaLi]],DeeperEtaLi),
-				createChains(DeeperEtaLi,[],DeeperEps,DeeperHist,[],NewChains,NewMarkEps,NewHist), %4.Step
-				( (nonEmptyList(CFeatEtaLi); nonEmptyList(ChainsEtaLi); nonEmptyList(DeeperChains)) -> loopExtermination(DeeperEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi)
-				, NewEtaLi = [NewEtaLiDeep|[ReEpsLi]] % 5.step
-				; NewEtaLi = EtaLi,NewEpsLi = EpsLi). % 6.step -> Fehlt noch die Löschfunktion für die Epsilon-Li 
+			(debugMode -> writeln("now looping");true),
+			combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi), %	1. step 
+			createChains(EtaLi,Chains,MarkEpsLi,Hist,ChainsEtaLi,DeeperChains,DeeperEps,DeeperHist), % 2-3.step
+			append(CFeatEtaLi,ChainsEtaLi,DeeperEtaLi),
+			createChains(DeeperEtaLi,[],DeeperEps,DeeperHist,[],IterChains,NewMarkEps,NewHist), %4.Step
+			append(DeeperChains,IterChains,NewChains),
+			(debugMode -> writeln("Eta: " + EtaLi),writeln("Epsilon: " + EpsLi),writeln("New Eta: " + DeeperEtaLi),writeln("New Epsilon: " + MarkEpsLi);true),
+			(debugMode -> write("Chains: "), writeln(NewChains);true),
+			length(EtaLi,Leta),length(DeeperEtaLi,LNewEta),length(NewChains,LChains),length(ChainsEtaLi,LChainEta),
+			(debugMode ->write("#Eta: "), write(Leta),write(" #NewEta: "), write( LNewEta), write(" #Eta from Chains: "),writeln(LChainEta);true),
+			(debugMode ->write("#Chains: "),writeln(LChains);true),
+			( ((Leta < LNewEta); nonEmptyList(NewChains)) -> loopExtermination(DeeperEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi)
+			, NewEtaLi = [DeeperEtaLi|[NewEtaLiDeep]], NewEpsLi = ReEpsLi % 5.step
+			; (debugMode -> writeln("Stop the loop!");true)
+			, NewEtaLi = EtaLi,NewEpsLi = EpsLi). % 6.step -> Fehlt noch die Löschfunktion für die Epsilon-Li
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % 1. Step after here
@@ -73,13 +84,14 @@ loopExtermination(EtaLi,Chains,EpsLi,Hist,NewEtaLi,NewEpsLi):-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 combFeatures(EtaLi,[],EtaLi,[]).
 combFeatures([],EpsLi,[],EpsLi):- debugMode -> writeln("No Eta-Li found"); true. 
-combFeatures([EtaLi|RestEtaLi],EpsLi,NewEtaLis,MarkEpsLis) :- checkFeatEtaEps(EtaLi,EpsLi,FitEpsLi,NoFitEpsLi), % checks for fitting epsilon-Li
-															(debugMode -> write("Fitting epsilon-Li: "), writeln(FitEpsLi)),
-															buildNewEtaLi(EtaLi,FitEpsLi,NewEta), append(FitEpsLi,NoFitEpsLi,NewEpsLi), % build all new possible eta-Li
-															(debugMode -> write("build new eta-Li: "),writeln(NewEta)),
-															combFeatures(RestEtaLi,NewEpsLi,NewRestEtaLi,MarkEpsLis), % recursion (we need to go DEEPER!)
-															checkIfNew(NewEta,NewRestEtaLi,NewEtaLis). % checks if new eta-Li is realy new, and adds it to the list 
-
+combFeatures([EtaLi|RestEtaLi],EpsLi,NewEtaLis,MarkEpsLis) :- 
+			checkFeatEtaEps(EtaLi,EpsLi,FitEpsLi,NoFitEpsLi), % checks for fitting epsilon-Li
+			(debugMode -> write("Fitting epsilon-Li: "), write(FitEpsLi), write(" for eta-Li: "), writeln(EtaLi)),
+			% HIER BUG -> Bitte lösen
+			buildNewEtaLi(EtaLi,FitEpsLi,NewEta), append(FitEpsLi,NoFitEpsLi,NewEpsLi), % build all new possible eta-Li
+			(debugMode -> write("build new eta-Li: "),writeln(NewEta)),
+			combFeatures(RestEtaLi,NewEpsLi,NewRestEtaLi,MarkEpsLis), % recursion (we need to go DEEPER!)
+			checkIfNew(NewEta,NewRestEtaLi,NewEtaLis). % checks if new eta-Li is realy new, and adds it to the list 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkFeatEtaEps(+Eta_Li,+[Epsilon_Li],-[Matching_Epsilon_Li],-[Nonmatching_Epsilon_Li])
@@ -88,11 +100,13 @@ combFeatures([EtaLi|RestEtaLi],EpsLi,NewEtaLis,MarkEpsLis) :- checkFeatEtaEps(Et
 % 	and seperates the matching and nonmatching into two different lists
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkFeatEtaEps(_,[],[],[]).
-checkFeatEtaEps(li(_,FsW,_),[epsLi(FsE,Mark)|RestEta],FitEpsLi,NoFitEpsLi) :- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,_),%(debug -> write("Neg-Feat W: "), writeln(NFsW), write("Pos-Feat E: "), writeln(PFsE)),	% split the feature lists into positive and negative features lists
-																						( matchFeatLists(PFsE,NFsW) -> FitEpsLi = [epsLi(FsE,dot)| RestFitEps], NoFitEpsLi = RestNoFitEps % if the list from the eta-Li and from the epsilon-Li match
-																						% this is also the point he epsilon-LI may get marked
-																						; FitEpsLi = RestFitEps, NoFitEpsLi = [epsLi(FsE,Mark)|RestNoFitEps]), % if they do not match
-																						checkFeatEtaEps(li(_,FsW,_),RestEta,RestFitEps,RestNoFitEps). % recursion
+checkFeatEtaEps(li(_,FsW,_),[epsLi(FsE,Mark)|RestEta],FitEpsLi,NoFitEpsLi) :- 
+			splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,_),%(debug -> write("Neg-Feat W: "), writeln(NFsW), write("Pos-Feat E: "), writeln(PFsE)),	% split the feature lists into positive and negative features lists
+			( matchFeatLists(PFsE,NFsW) -> FitEpsLi = [epsLi(FsE,dot)| RestFitEps], NoFitEpsLi = RestNoFitEps % if the list from the eta-Li and from the epsilon-Li match
+			% this is also the point he epsilon-LI may get marked
+			; FitEpsLi = RestFitEps, NoFitEpsLi = [epsLi(FsE,Mark)|RestNoFitEps]), % if they do not match
+			checkFeatEtaEps(li(_,FsW,_),RestEta,RestFitEps,RestNoFitEps). % recursion
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % splitFeat(+Fs,-PFS,-NFs)
 %
@@ -119,15 +133,20 @@ matchFeatLists([=A|PFs],[ A|NFs]):- matchFeatLists(PFs,NFs).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % buildNewEtaLi(+EtaLi,+[EpsLi],-[NewEta])
-%
+%	TODO: Einfügen von Duplikaten nachvollziehen und Beheben
 % 	makes as many new eta-Lis as are epsilon-Li in [EpsLi]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 buildNewEtaLi(EtaLi,[],[EtaLi]).
-buildNewEtaLi(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,Mark)|EpsRest],NewEtaLi):- buildNewEtaLi(li([W],FsW,(FsH,EpsHist)),EpsRest,DeepNewEtaLi), % recursion first to let the list of new LI grow from smalles point onward for less checking 
-																splitFeat(FsW,PFsW,_),splitFeat(FsE,_,NFsE),	%split the Feature lists of the eta- and epsilon-Li
-																append(PFsW,NFsE,NewFsW),	% combine the positive feature of the eta-Li and the negative feature of the epasilon-Li together
-																addHistory(EpsHist,[epsLi(FsE,Mark)],NewEpsHist),	% add the used epsilon-Li to the history of epsilon-Li of the eta-Li
-																NewEtaLi = [li([W],NewFsW,(FsH,NewEpsHist))|DeepNewEtaLi].
+buildNewEtaLi(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,Mark)|EpsRest],NewEtaLi):- 
+			buildNewEtaLi(li([W],FsW,(FsH,EpsHist)),EpsRest,DeepNewEtaLi), % recursion first to let the list of new LI grow from smalles point onward for less checking 
+			(debugMode -> write("Start Building with: "),writeln(epsLi(FsE,Mark));true),
+			splitFeat(FsW,PFsW,_),splitFeat(FsE,_,NFsE),	%split the Feature lists of the eta- and epsilon-Li
+			(debugMode -> writeln("I split the Features");true),
+			append(PFsW,NFsE,NewFsW),	% combine the positive feature of the eta-Li and the negative feature of the epasilon-Li together
+			(debugMode -> writeln("Before History");true),
+			addHistory(EpsHist,[epsLi(FsE,Mark)],NewEpsHist),	% add the used epsilon-Li to the history of epsilon-Li of the eta-Li
+			(debugMode -> writeln("After History");true),
+			NewEtaLi = [li([W],NewFsW,(FsH,NewEpsHist))|DeepNewEtaLi].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkIfNew(+[Eta_Li],+[Eta_Li],-[New_Eta_Lis])
@@ -170,7 +189,7 @@ checkHistory([HeadList|RestList],Hist2,NewHist):- (member(HeadList,Hist2) -> Che
 %	adds a new eps-Li to all history Lists 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 addHistory([[]],[EpsLi],[[EpsLi]]).
-addHistory([[EpsList]],[EpsLi],[[NewEpsList]]):- append(EpsList,[EpsLi],NewEpsList).
+addHistory([[EpsList]],[EpsLi],[[EpsList|[EpsLi]]]). % :- append(EpsList,[EpsLi],NewEpsList).
 addHistory([HeadList|RestList],[EpsLi],[NewHeadList|NewRestList]):- append(HeadList,[EpsLi],NewHeadList),addHistory(RestList,[EpsLi],NewRestList).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -205,16 +224,18 @@ addHistory([HeadList|RestList],[EpsLi],[NewHeadList|NewRestList]):- append(HeadL
 %			c. Save the original Feature-list of the eta-Li and add the used epsilon-Li to the list of epsilon-Lis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 createChains([],[],EpsLi,ChainHist,[],[],EpsLi,ChainHist).
-createChains([EtaHead|EtaRest],[],EpsLis,ChainHist,NewEtaLis,OutChains,NewEpsLis,NewHist):- checkEtaEpsChain(EtaHead,EpsLis,FitEpsLis,NoFitEpsLis),(debugMode -> write("Semi matching Epsilon-Li: "), writeln(FitEpsLis);true),	% 4.Step -> Case without chains present 
-																					 		buildNewChain(EtaHead,FitEpsLis,EtaHeadChains), append(FitEpsLis,NoFitEpsLis,MarkedEpsLis),
-																							createChains(EtaRest,[],MarkedEpsLis,ChainHist,NewEtaLis,DeeperChains,NewEpsLis,DeeperChainHist), % recursion
-																							(debugMode ->write("Possible new Chain: "),writeln(EtaHeadChains);true),
-																							(debugMode ->write("Our History: "),writeln(DeeperChainHist) ;true),
-																							compHistory(EtaHeadChains,DeeperChainHist,NewChains,NewHist), append(NewChains,DeeperChains,OutChains).
-createChains(EtaLis,Chains,EpsLis,ChainHist,NewEtaLis,NewChains,MarkEpsLis,NewChainHist):- checkOldChainsEtaLi(Chains,EpsLis,NewPosEtaLis,MarkEpsLis,RemChains),  % 2.Step -> Case with chains present, 
-																							checkIfNew(NewPosEtaLis,EtaLis,NewEtaLis),
-																							checkOldChainsChain(RemChains,MarkEpsLis,ChainHist,NewChains,NewChainHist).% 2.Step + 3.Step
-																							% NB: Noch nicht fertig -> Braucht es noch mehr? -> Step 4
+createChains([EtaHead|EtaRest],[],EpsLis,ChainHist,NewEtaLis,OutChains,NewEpsLis,NewHist):- 
+			checkEtaEpsChain(EtaHead,EpsLis,FitEpsLis,NoFitEpsLis),(debugMode -> write("Semi matching Epsilon-Li: "), writeln(FitEpsLis);true),	% 4.Step -> Case without chains present 
+			buildNewChain(EtaHead,FitEpsLis,EtaHeadChains), append(FitEpsLis,NoFitEpsLis,MarkedEpsLis),
+			createChains(EtaRest,[],MarkedEpsLis,ChainHist,NewEtaLis,DeeperChains,NewEpsLis,DeeperChainHist), % recursion
+			(debugMode ->write("Possible new Chain: "),writeln(EtaHeadChains);true),
+			(debugMode ->write("Our History: "),writeln(DeeperChainHist) ;true),
+			compHistory(EtaHeadChains,DeeperChainHist,NewChains,NewHist), append(NewChains,DeeperChains,OutChains).
+createChains(EtaLis,Chains,EpsLis,ChainHist,NewEtaLis,NewChains,MarkEpsLis,NewChainHist):- 
+			checkOldChainsEtaLi(Chains,EpsLis,NewPosEtaLis,MarkEpsLis,RemChains),  % 2.Step -> Case with chains present, 
+			checkIfNew(NewPosEtaLis,EtaLis,NewEtaLis),
+			checkOldChainsChain(RemChains,MarkEpsLis,ChainHist,NewChains,NewChainHist).% 2.Step + 3.Step
+			% NB: Noch nicht fertig -> Braucht es noch mehr? -> Step 4
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkEtaEpsChain(+Eta_Li,+[Epsilon_Lis],-[Fitting_Eps_Lis],-[Non_Fitting_EpsLis])
@@ -222,10 +243,11 @@ createChains(EtaLis,Chains,EpsLis,ChainHist,NewEtaLis,NewChains,MarkEpsLis,NewCh
 %	seperates the epsilon-Lis into those that may result in a chain and those that do not
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkEtaEpsChain(_,[],[],[]).
-checkEtaEpsChain(li(_,FsW,_),[epsLi(FsE,Mark)|EpsRest],FitEpsLis,NoFitEpsLis):- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,_),
-																				checkEtaEpsChain(li(_,FsW,_),EpsRest,RestFitEps,RestNoFitEps),
-																				( ((PFsE \= []),matchPartFeatures(PFsE,NFsW,nonempty)) -> FitEpsLis = [epsLi(FsE,Mark)|RestFitEps],NoFitEpsLis = RestNoFitEps
-																				; FitEpsLis = RestFitEps, NoFitEpsLis = [epsLi(FsE,Mark)|RestNoFitEps]).
+checkEtaEpsChain(li(_,FsW,_),[epsLi(FsE,Mark)|EpsRest],FitEpsLis,NoFitEpsLis):- 
+			splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,_),
+			checkEtaEpsChain(li(_,FsW,_),EpsRest,RestFitEps,RestNoFitEps),
+			( ((PFsE \= []),matchPartFeatures(PFsE,NFsW,nonempty)) -> FitEpsLis = [epsLi(FsE,Mark)|RestFitEps],NoFitEpsLis = RestNoFitEps
+			; FitEpsLis = RestFitEps, NoFitEpsLis = [epsLi(FsE,Mark)|RestNoFitEps]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -234,9 +256,10 @@ checkEtaEpsChain(li(_,FsW,_),[epsLi(FsE,Mark)|EpsRest],FitEpsLis,NoFitEpsLis):- 
 %	builds a chain from the eta-Li and all possible epsilon-Li
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 buildNewChain(_,[],[]).
-buildNewChain(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,_)|EpsRest],EtaChains):- splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,NFsE), getPartFeatures(PFsE,NFsW,RFsW),
-																				   EtaChains = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),[epsChainLi([W],FsH,[FsE])])|RestChain],
-																				   buildNewChain(li([W],FsW,(FsH,EpsHist)),EpsRest,RestChain).
+buildNewChain(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,_)|EpsRest],EtaChains):- 
+			splitFeat(FsW,_,NFsW),splitFeat(FsE,PFsE,NFsE), getPartFeatures(PFsE,NFsW,RFsW),
+			EtaChains = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),[epsChainLi([W],FsH,[FsE])])|RestChain],
+			buildNewChain(li([W],FsW,(FsH,EpsHist)),EpsRest,RestChain).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % matchPartFeatures(+[pos_Feature],+[neg_Feature],-[Remain_Neg_Feat],-Empty_Status)
@@ -270,13 +293,13 @@ getPartFeatures(_,_,[]):- false.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 compHistory([],ChainHist,[],ChainHist).
 compHistory([chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|RestChain],ChainHist,NewChain,NewChainHist):- 
-										member(ChainItemHist,ChainHist), % did that epsilon combination already occur?
-										(debugMode -> writeln("Found match. Add Nothing."),writeln(ChainItemHist),writeln(ChainHist);true),
-										compHistory(RestChain,ChainHist,NewChain,NewChainHist); 								% yes -> discard chain and check rest
-										NewChain = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|NewRestChain], 		% no -> add chain and check rest
-										(debugMode -> write("Found no match. New Chain: "),writeln(NewChain);true),
-										compHistory(RestChain,[ChainItemHist|ChainHist],NewRestChain,NewChainHist).
-										
+			member(ChainItemHist,ChainHist), % did that epsilon combination already occur?
+			(debugMode -> writeln("Found match. Add Nothing."),writeln(ChainItemHist),writeln(ChainHist);true),
+			compHistory(RestChain,ChainHist,NewChain,NewChainHist); 								% yes -> discard chain and check rest
+			NewChain = [chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|NewRestChain], 		% no -> add chain and check rest
+			(debugMode -> write("Found no match. New Chain: "),writeln(NewChain);true),
+			compHistory(RestChain,[ChainItemHist|ChainHist],NewRestChain,NewChainHist).
+			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkOldChainsEtaLi(+[Chains],+[EpsLis],-[EtaLis],-[EpsLis],-[RemChains])
 % 
@@ -284,10 +307,10 @@ compHistory([chainItem([NFsE],RFsW,([W],FsH,EpsHist),ChainItemHist)|RestChain],C
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkOldChainsEtaLi([],Eps,[],Eps,[]).
 checkOldChainsEtaLi([HeadChain|RestChain],EpsLis,NewEtaLis,MarkEpsLis,RemChains):-
-										forgeNewEta(HeadChain,EpsLis,NewHeadEtaLis,NewMarks,HeadRemChain),
-										checkOldChainsEtaLi(RestChain,NewMarks,DeeperEtaLis,MarkEpsLis,DeeperRemChains),
-										append(NewHeadEtaLis,DeeperEtaLis,NewEtaLis),
-										append(HeadRemChain,DeeperRemChains,RemChains).
+			forgeNewEta(HeadChain,EpsLis,NewHeadEtaLis,NewMarks,HeadRemChain),
+			checkOldChainsEtaLi(RestChain,NewMarks,DeeperEtaLis,MarkEpsLis,DeeperRemChains),
+			append(NewHeadEtaLis,DeeperEtaLis,NewEtaLis),
+			append(HeadRemChain,DeeperRemChains,RemChains).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkOldChainsChain(+[Chains],+[EpsLis],+[ChainsHist],-[Chains],-[ChainHist]).
@@ -296,10 +319,10 @@ checkOldChainsEtaLi([HeadChain|RestChain],EpsLis,NewEtaLis,MarkEpsLis,RemChains)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkOldChainsChain([],_,Hist,[],Hist).
 checkOldChainsChain([HeadChain|RestChain],EpsLis,ChainsHist,NewChains,NewChainHist):-
-										forgeNewChain(HeadChain,EpsLis,NewPotChains),
-										compHistory(NewPotChains,ChainsHist,NewHeadChains,DeepChainHist),
-										checkOldChainsChain(RestChain,EpsLis,DeepChainHist,DeeperChains,NewChainHist),
-										append(NewHeadChains,DeeperChains,NewChains).
+			forgeNewChain(HeadChain,EpsLis,NewPotChains),
+			compHistory(NewPotChains,ChainsHist,NewHeadChains,DeepChainHist),
+			checkOldChainsChain(RestChain,EpsLis,DeepChainHist,DeeperChains,NewChainHist),
+			append(NewHeadChains,DeeperChains,NewChains).
 										
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % forgeNewChain(+ChainItem,+[EpsLi],-[ChainItems])
@@ -308,12 +331,12 @@ checkOldChainsChain([HeadChain|RestChain],EpsLis,ChainsHist,NewChains,NewChainHi
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%			
 forgeNewChain(_,[],[]).							
 forgeNewChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),[epsLi(FsE,_)|RestEta],NewChain):-
-										splitFeat(FsE,PFsE,NFsE),matchChainFeat(NFsC,FsW,PFsE,FsC,RsW),
-										forgeNewChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),RestEta,DeeperChains),
-										( (nonEmptyList(RsW),length(FsW,LOld),length(RsW,LNew),(LOld > LNew)) -> append(ChainItemHist,[epsChainLi([W],FsH,FsE)],NewChainItemHist)
-										, RFsW = RsW, append(FsC,NFsE, NewFsC)
-										, NewChain = [chainItem(NewFsC, RFsW, ([W],FsH,EpsHist),NewChainItemHist)|DeeperChains]
-										; NewChain = DeeperChains).
+			splitFeat(FsE,PFsE,NFsE),matchChainFeat(NFsC,FsW,PFsE,FsC,RsW),
+			forgeNewChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),RestEta,DeeperChains),
+			( (nonEmptyList(RsW),length(FsW,LOld),length(RsW,LNew),(LOld > LNew)) -> append(ChainItemHist,[epsChainLi([W],FsH,FsE)],NewChainItemHist)
+			, RFsW = RsW, append(FsC,NFsE, NewFsC)
+			, NewChain = [chainItem(NewFsC, RFsW, ([W],FsH,EpsHist),NewChainItemHist)|DeeperChains]
+			; NewChain = DeeperChains).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % forgeNewEta(+ChainItem,+[EpsLi],-[EtaLi],-[EpsLi],-[ChainItem])
@@ -322,15 +345,15 @@ forgeNewChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),[epsLi(FsE,_)|
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 forgeNewEta(_,[],[],[],[]).
 forgeNewEta(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),[epsLi(FsE,Mark)|RestEta],NewEtaLis,MarkEps,RemChain):-
-					splitFeat(FsE,PFsE,_),matchEtaChain(NFsC,FsW,PFsE,RF),
-					forgeNewEta(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),RestEta,DeeperEta,DeeperMarks,DeeperChain),
-					( emptyList(RF) -> buildNewEtaLiChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),epsLi(FsE,Mark),NewLi)
-					, NewEtaLis = [NewLi|DeeperEta]
-					, MarkEps = [epsLi(FsE,dot)|DeeperMarks]
-					, RemChain = DeeperChain
-					; NewEtaLis = DeeperEta
-					, MarkEps = [epsLi(FsE,Mark)|DeeperMarks]
-					, RemChain = [chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist)|DeeperChain]).
+			splitFeat(FsE,PFsE,_),matchEtaChain(NFsC,FsW,PFsE,RF),
+			forgeNewEta(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),RestEta,DeeperEta,DeeperMarks,DeeperChain),
+			( emptyList(RF) -> buildNewEtaLiChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),epsLi(FsE,Mark),NewLi)
+			, NewEtaLis = [NewLi|DeeperEta]
+			, MarkEps = [epsLi(FsE,dot)|DeeperMarks]
+			, RemChain = DeeperChain
+			; NewEtaLis = DeeperEta
+			, MarkEps = [epsLi(FsE,Mark)|DeeperMarks]
+			, RemChain = [chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist)|DeeperChain]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % matchChainFeat(+[[NFs]],+[NFsW],+[PFsE],-[[NewFsC]],-[NFsW])
@@ -384,7 +407,7 @@ reforgeChainHist([epsChainLi([_],_,FsE)|RestChain],EpsLi,NewHist):-
 %
 %	checks if a list is not empty
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-nonEmptyList([]):-false.
+nonEmptyList([]):-!,false.
 nonEmptyList(_):-true.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -393,4 +416,4 @@ nonEmptyList(_):-true.
 %	checks if a list is empty
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 emptyList([]):-true.
-emptyList(_):- false.
+emptyList(_):-!, false.
