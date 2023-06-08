@@ -54,15 +54,16 @@ loopExtermination(EtaLi,[],EpsLi,Hist,NewEtaLi,NewEpsLi):-
 			combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi), %	1. step
 			(debugMode->write("Eta-LIs after Eps-LI: "),writeln(CFeatEtaLi);true),
 			createChains(CFeatEtaLi,[],MarkEpsLi,Hist,[],NewChains,NewMarkEps,NewHist), %4.Step
-			(debugMode -> write("Old Eta: "),writeln(EtaLi),write("Epsilon: "),writeln(EpsLi),write("New Eta: "),writeln(CFeatEtaLi),write("New Epsilon: "),writeln(MarkEpsLi);true),
+			(debugMode -> write("Old Eta: "),writeln(EtaLi),write("Epsilon: "),writeln(EpsLi),write("New Eta: "),writeln(CFeatEtaLi),write("New Epsilon: "),writeln(NewMarkEps);true),
 			(debugMode -> write("Chains: "), writeln(NewChains);true),
 			length(EtaLi,Leta),length(NewChains,LChains),length(CFeatEtaLi,LNewEta),
 			(debugMode ->write("#Eta: "), write(Leta),write(" #NewEta: "), writeln(LNewEta);true),
 			(debugMode ->write("#Chains: "),writeln(LChains);true),
-			( ((Leta < LNewEta); nonEmptyList(NewChains)) -> loopExtermination(CFeatEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi)
-			, NewEtaLi = NewEtaLiDeep, NewEpsLi = ReEpsLi % 5.step
-			; (debugMode -> writeln("Stop the loop!");true)
-			, NewEtaLi = EtaLi,NewEpsLi = EpsLi). % 6.step -> Fehlt noch die Löschfunktion für die Epsilon-Li
+			( ((Leta < LNewEta); nonEmptyList(NewChains)) -> loopExtermination(CFeatEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLi,NewEpsLi)
+			; (debugMode -> writeln("Stop the loop!");true) % 5.step
+			, cleanEpsList(EpsLi,CleanEpsLis)
+			, (debugMode->write("Final Eta: "),writeln(EtaLi),write("Epsilon: "),writeln(CleanEpsLis);true)
+			, NewEtaLi = EtaLi,NewEpsLi = CleanEpsLis). % 6.step -> Fehlt noch die Löschfunktion für die Epsilon-Li
 loopExtermination(EtaLi,Chains,EpsLi,Hist,NewEtaLi,NewEpsLi):-
 			(debugMode -> writeln("now looping with Chains");true),
 			combFeatures(EtaLi,EpsLi,CFeatEtaLi,MarkEpsLi), %	1. step
@@ -71,15 +72,16 @@ loopExtermination(EtaLi,Chains,EpsLi,Hist,NewEtaLi,NewEpsLi):-
 			(debugMode ->write("Eta-LIs after Chains: "),writeln(ChainsEtaLi);true),
 			createChains(ChainsEtaLi,[],DeeperEps,DeeperHist,[],IterChains,NewMarkEps,NewHist), %4.Step
 			append(DeeperChains,IterChains,NewChains),
-			(debugMode -> write("Old Eta: "),writeln(EtaLi),write("Epsilon: "),writeln(EpsLi),write("New Eta: "),writeln(ChainsEtaLi),write("New Epsilon: "),writeln(MarkEpsLi);true),
+			(debugMode -> write("Old Eta: "),writeln(EtaLi),write("Epsilon: "),writeln(EpsLi),write("New Eta: "),writeln(ChainsEtaLi),write("New Epsilon: "),writeln(NewMarkEps);true),
 			(debugMode -> write("Chains: "), writeln(NewChains);true),
 			length(EtaLi,Leta),length(ChainsEtaLi,LNewEta),length(NewChains,LChains),
 			(debugMode ->write("#Eta: "), write(Leta),write(" #NewEta: "), writeln(LNewEta);true),
 			(debugMode ->write("#Chains: "),writeln(LChains);true),
-			( ((Leta < LNewEta); nonEmptyList(NewChains)) -> loopExtermination(ChainsEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi)
-			, NewEtaLi = [ChainsEtaLi|[NewEtaLiDeep]], NewEpsLi = ReEpsLi % 5.step
-			; (debugMode -> writeln("Stop the loop!");true)
-			, NewEtaLi = EtaLi,NewEpsLi = EpsLi). % 6.step -> Fehlt noch die Löschfunktion für die Epsilon-Li
+			( ((Leta < LNewEta); nonEmptyList(NewChains)) -> loopExtermination(ChainsEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLi,NewEpsLi)
+			; (debugMode -> writeln("Stop the loop!");true) % 5.step
+			, cleanEpsList(EpsLi,CleanEpsLis)
+			, (debugMode->write("Final Eta: "),writeln(EtaLi),write("Epsilon: "),writeln(CleanEpsLis);true)
+			, NewEtaLi = EtaLi,NewEpsLi = CleanEpsLis). % 6.step -> Fehlt noch die Löschfunktion für die Epsilon-Li
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -257,7 +259,7 @@ createChains(EtaLis,Chains,EpsLis,ChainHist,NewEtaLis,NewChains,MarkEpsLis,NewCh
 			(debugMode ->write("Chains remaining to check for further Chains: "), writeln(RemChains);true),
 			checkOldChainsChain(RemChains,MarkEpsLis,ChainHist,NewChains,NewChainHist),% 2.Step + 3.Step
 			(debugMode->write("New History: "),writeln(NewChainHist);true).
-			% NB: Noch nicht fertig -> Braucht es noch mehr? -> Step 4
+			
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkEtaEpsChain(+Eta_Li,+[Epsilon_Lis],-[Fitting_Eps_Lis],-[Non_Fitting_EpsLis])
@@ -365,7 +367,7 @@ forgeNewChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),[epsLi(FsE,_)|
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % forgeNewEta(+ChainItem,+[EpsLi],-[EtaLi],-[EpsLi],-[ChainItem])
-%
+%	TODO: Hier eps-LI aus Chain mit dot versehen
 %	makes Eta-Li with one old Chain and as many epsilon-Li as possible
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 forgeNewEta(_,[],[],[],[]).
@@ -375,10 +377,12 @@ forgeNewEta(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),[epsLi(FsE,Mark)
 			(debugMode->write("Test for this Eps-LI: "),writeln(FsE);true),
 			( emptyList(RF) 
 			-> (debugMode->writeln("Matched all remaining Features.");true) 
-			, buildNewEtaLiChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),epsLi(FsE,Mark),NewLi)
+			, buildNewEtaLiChain(chainItem(NFsC,FsW,([W],FsH,EpsHist),ChainItemHist),epsLi(FsE,Mark),NewLi,NewHist)
 			, (debugMode->write("Build Eta-LI: "),writeln(NewLi);true)
 			, NewEtaLis = [NewLi|DeeperEta]
-			, MarkEps = [epsLi(FsE,dot)|DeeperMarks]
+			, append(NewHist,DeeperMarks,UncleanEpsList)
+			, cleanEpsList(UncleanEpsList,MarkEps)
+			, (debugMode->write("Uncleaned Eps List: "),writeln(UncleanEpsList),write("Cleaned Eps List: "),writeln(MarkEps);true)
 			, RemChain = DeeperChain
 			; (debugMode->write("Could not fully match for this Eps-LI. Remaining Features: "),writeln(RF);true)
 			, NewEtaLis = DeeperEta
@@ -417,11 +421,11 @@ matchEtaChain(_,_,_,[[]]):-debugMode->writeln("Didn't match all");true.
 %
 %	builds a new Eta-LI out of a chain item and an epsilon-LI
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-buildNewEtaLiChain(chainItem(_,_,([W],FsH,[[]]),ChainItemHist),epsLi(FsE,_),NewLi):-
+buildNewEtaLiChain(chainItem(_,_,([W],FsH,[[]]),ChainItemHist),epsLi(FsE,_),NewLi,NewHist):-
 			splitFeat(FsE,_,NFsE),splitFeat(FsH,PFsW,_),append(PFsW,NFsE,NewFs),
 			reforgeChainHist(ChainItemHist,epsLi(FsE,dot),NewHist),
 			NewLi = li([W],NewFs,(FsH,NewHist)).
-buildNewEtaLiChain(chainItem(_,_,([W],FsH,EpsHist),ChainItemHist),epsLi(FsE,_),NewLi):- 
+buildNewEtaLiChain(chainItem(_,_,([W],FsH,EpsHist),ChainItemHist),epsLi(FsE,_),NewLi,NewHist):- 
 			splitFeat(FsE,_,NFsE),splitFeat(FsH,PFsW,_),append(PFsW,NFsE,NewFs),
 			reforgeChainHist(ChainItemHist,epsLi(FsE,dot),NewHist),
 			append(EpsHist,NewHist,LiHist),
@@ -453,3 +457,24 @@ nonEmptyList(_):-true.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 emptyList([]):-true.
 emptyList(_):-!, false.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% cleanEpsList(+[Eps_List],-[Eps_List])
+%
+%	Removes double entries in an epsilon List
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+cleanEpsList([],[]).
+cleanEpsList([Ep|Eps],[OutEps|DeeperEpsList]):- 
+			checkEpsList(Ep,Eps,OutEps,RestEps),
+			cleanEpsList(RestEps,DeeperEpsList).
+		
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%		
+% checkEpsList(+Eps_Li,+[Eps_List],-Eps_Li,-[Eps_List]),			
+%
+%	compares one Epsilon Li with a List of Epsilon Li 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkEpsList(epsLi(FsE,Mark),[],epsLi(FsE,Mark),[]).
+checkEpsList(epsLi(FsE,dot),[epsLi(FsE,_)|RestEps],epsLi(FsE,dot),RestEps).
+checkEpsList(epsLi(FsE,_),[epsLi(FsE,dot)|RestEps],epsLi(FsE,dot),RestEps).
+checkEpsList(epsLi(FsE1,Mark1),[epsLi(FsE2,Mark2)|RestEps],OutEpsLi,[epsLi(FsE2,Mark2)|DeeperEpsList]):-
+			checkEpsList(epsLi(FsE1,Mark1),RestEps,OutEpsLi,DeeperEpsList).

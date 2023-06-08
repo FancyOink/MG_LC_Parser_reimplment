@@ -7,7 +7,7 @@
 :- op(500, fx, =). % for selection features
 
 :- use_module(library(apply)).
-:- ['grammars/numbersContext'].
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

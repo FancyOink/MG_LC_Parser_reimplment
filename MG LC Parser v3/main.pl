@@ -12,9 +12,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Verwendetes Lexikon für das Parsen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-:-['grammars/maus'].
+%:-['grammars/maus'].
+%:-['grammars/numbers'].
+%:-['grammars/ZahlenSprache'].
+:-['grammars/EpsKetten'].
 
-:-exterminate.
+:-exterminate(Li),write("Li: "),writeln(Li).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Hauptfunktion des Parsers
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

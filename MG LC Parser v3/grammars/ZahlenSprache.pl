@@ -54,7 +54,6 @@ startCategory(c).
 
 [] :: ([=c1, +unU, cun]).
 [] :: ([=c1, +unU,c1,-un]).
-[] :: ([=c3, +taus, ctaus]).
 [] :: ([=c1, +zi, c1]). % epsilon		%Schminke
 [] :: ([=c1, +zi, +zeh, +unU, c1, -zi]). % epsilon
 [] :: ([=c1, +ssi, c1]). % epsilon
@@ -70,7 +69,3 @@ startCategory(c).
 [] :: ([=c1, +unU, c2, -tausU]). % epsilon
 [] :: ([=c1, c2]). % epsilon
 
-% hinzugefügt, um reine Suche anhand hinzugefügter Features durch Y-Li zu vermeiden könnte vieleicht auch durch eine "Vorverarbeitung" des Lexikons aus den anderen Y-LI generiert werden.
-[] :: ([=c1, c3]).
-[] :: ([=c2, c4]).
-[] :: ([=c1, c4]).
