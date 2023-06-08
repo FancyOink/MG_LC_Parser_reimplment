@@ -40,9 +40,9 @@ exterminate(NewEtaLi) :-
 			length(EtaLi,Leta),length(CFeatEtaLi,LNewEta),length(NewChains,LChains),
 			(debugMode ->write("#Eta: "), write(Leta),write(" #NewEta: "), writeln( LNewEta);true),
 			(debugMode ->write("#Chains: "),writeln(LChains);true),
-			( ((Leta < LNewEta);(LChains > 0)) -> loopExtermination(CFeatEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi),NewEtaLi = [NewEtaLiDeep|[ReEpsLi]]% 5. Step of extermination (Initial round) + Loop
+			( ((Leta < LNewEta);(LChains > 0)) -> loopExtermination(CFeatEtaLi,NewChains,NewMarkEps,NewHist,NewEtaLiDeep,ReEpsLi),NewEtaLi = (NewEtaLiDeep,ReEpsLi)% 5. Step of extermination (Initial round) + Loop
 			; (debugMode -> writeln("No loop!");true)
-			, NewEtaLi = [EtaLi|[EpsLi]]). % 6.Step (Initial round)
+			, NewEtaLi = (EtaLi,EpsLi)). % 6.Step (Initial round)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % loopExtermination(+[EtaLis],+[Chains],+[EpsLis],+[ChainHist],-[EtaLis],-[EpsLi])
