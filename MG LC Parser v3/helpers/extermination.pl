@@ -298,8 +298,8 @@ buildNewChain(li([W],FsW,(FsH,EpsHist)),[epsLi(FsE,_)|EpsRest],EtaChains):-
 matchPartFeatures([],[],empty):- false.
 matchPartFeatures([],[_|_],nonempty).
 matchPartFeatures(_,[],empty):- false.
-matchPartFeatures([+A|RPos],[-A|RNeg],nonempty):- matchPartFeatures(RPos,RNeg,nonempty).%,((Stat1 == bottom) -> Stat = nonempty).%,(debugMode -> write("Been here: "),writeln(Stat);true).
-matchPartFeatures([=A|RPos],[ A|RNeg],nonempty):- matchPartFeatures(RPos,RNeg,nonempty).%,((Stat1 == bottom) -> Stat = nonempty).%,(debugMode -> write("Been here: "),writeln(Stat);true).
+matchPartFeatures([+A|RPos],[-A|RNeg],nonempty):- matchPartFeatures(RPos,RNeg,nonempty).%,((Stat1 == bottom) -> Stat = nonempty).%
+matchPartFeatures([=A|RPos],[ A|RNeg],nonempty):- matchPartFeatures(RPos,RNeg,nonempty).%,((Stat1 == bottom) -> Stat = nonempty).%
 matchPartFeatures(_,_,empty):- false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
