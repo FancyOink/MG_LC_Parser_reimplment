@@ -8,7 +8,7 @@
 :- op(500, fx, =). % for selection features
 
 
-debugMode.	% comment this line, if debugMode should be off
+%debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -100,13 +100,13 @@ loopExtermination(EtaLi,Chains,EpsLi,Hist,NewEtaLi,NewEpsLi):-
 %			c. Mark the used epsilon-Li in the list of epsilon-Lis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 combFeatures(EtaLi,[],EtaLi,[]).
-combFeatures([],EpsLi,[],EpsLi):- debugMode -> writeln("No Eta-Li found"); true. 
+combFeatures([],EpsLi,[],EpsLi):- (debugMode -> writeln("No Eta-Li found"); true). 
 combFeatures([EtaLi|RestEtaLi],EpsLi,NewEtaLis,MarkEpsLis) :- 
 			checkFeatEtaEps(EtaLi,EpsLi,FitEpsLi,NoFitEpsLi), % checks for fitting epsilon-Li
-			(debugMode -> write("Fitting epsilon-Li: "), write(FitEpsLi), write(" for eta-Li: "), writeln(EtaLi)),
+			(debugMode -> write("Fitting epsilon-Li: "), write(FitEpsLi), write(" for eta-Li: "), writeln(EtaLi);true),
 			% HIER BUG -> Bitte lösen
 			buildNewEtaLi(EtaLi,FitEpsLi,NewEta), append(FitEpsLi,NoFitEpsLi,NewEpsLi), % build all new possible eta-Li
-			(debugMode -> write("build new eta-Li: "),writeln(NewEta)),
+			(debugMode -> write("build new eta-Li: "),writeln(NewEta);true),
 			combFeatures(RestEtaLi,NewEpsLi,NewRestEtaLi,MarkEpsLis), % recursion (we need to go DEEPER!)
 			checkIfNew(NewEta,NewRestEtaLi,NewEtaLis),
 			(debugMode -> write("New Eta-Li to use: "), writeln(NewEtaLis);true). % checks if new eta-Li is realy new, and adds it to the list 
@@ -130,10 +130,13 @@ checkFeatEtaEps(li(_,FsW,_),[epsLi(FsE,Mark)|RestEta],FitEpsLi,NoFitEpsLi) :-
 %
 % 	splits a feature list into positive and negative feature lists
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-splitFeat([],[],[]):- debugMode -> writeln("Tried to split empty list.");true.
-splitFeat([-_|_],_,_):- (debugMode -> writeln("Feature List not in order! Licensee before Category found!")),false. % should never occure, but to be safe.
-splitFeat([+_],_,_):- (debugMode -> writeln("Feature List not in order! Single positive Feature found!")),false. % should never occure, but to be safe.
-splitFeat([=_],_,_):- (debugMode -> writeln("Feature List not in order! Single positive Feature found!")),false. % should never occure, but to be safe.
+splitFeat([],[],[]):- (debugMode -> writeln("Tried to split empty list.");true).
+splitFeat([-_|_],_,_):- (debugMode -> writeln("Feature List not in order! Licensee before Category found!");true),
+			false. % should never occure, but to be safe.
+splitFeat([+_],_,_):- (debugMode -> writeln("Feature List not in order! Single positive Feature found!");true),
+			false. % should never occure, but to be safe.
+splitFeat([=_],_,_):- (debugMode -> writeln("Feature List not in order! Single positive Feature found!");true),
+			false. % should never occure, but to be safe.
 splitFeat([=F|Fs],[=F|PTail],NFs):- splitFeat(Fs,PTail,NFs).
 splitFeat([+F|Fs],[+F|PTail],NFs):- splitFeat(Fs,PTail,NFs).
 splitFeat([ F|Fs],[],[ F|Fs]). % the category is the first negative Feature in a list. If we found it, everything before is a positive feature and everything after a negative feature
@@ -245,7 +248,8 @@ addHistory(List1,List2,NewList):-append(List1,List2,NewList).% bei Ausweitung au
 createChains([],[],EpsLi,ChainHist,[],[],EpsLi,ChainHist).
 createChains([EtaHead|EtaRest],[],EpsLis,ChainHist,NewEtaLis,OutChains,NewEpsLis,NewHist):- 
 			(debugMode -> writeln("Check for new Chains");true),
-			checkEtaEpsChain(EtaHead,EpsLis,FitEpsLis,NoFitEpsLis),(debugMode -> write("Semi matching Epsilon-Li: "), writeln(FitEpsLis);true),	% 4.Step -> Case without chains present 
+			checkEtaEpsChain(EtaHead,EpsLis,FitEpsLis,NoFitEpsLis),
+			(debugMode -> write("Semi matching Epsilon-Li: "), writeln(FitEpsLis);true),	% 4.Step -> Case without chains present 
 			buildNewChain(EtaHead,FitEpsLis,EtaHeadChains), append(FitEpsLis,NoFitEpsLis,MarkedEpsLis),
 			createChains(EtaRest,[],MarkedEpsLis,ChainHist,NewEtaLis,DeeperChains,NewEpsLis,DeeperChainHist), % recursion
 			(debugMode ->write("Possible new Chain: "),writeln(EtaHeadChains);true),
@@ -414,7 +418,7 @@ matchEtaChain([[]|RestNFs],NFsW,PFs,RF):- (debugMode->writeln("Finished a NFsC")
 matchEtaChain([[F|Fs]|RestNFs],NFsW,[=F|PFs],RF):- (debugMode->write("Matched Category: "),writeln(F);true),matchEtaChain([Fs|RestNFs],NFsW,PFs,RF).
 matchEtaChain([[-F|Fs]|RestNFs],NFsW,[+F|PFs],RF):- (debugMode->write("Matched Licensee NFsC: "),writeln(F);true),matchEtaChain([Fs|RestNFs],NFsW,PFs,RF).
 matchEtaChain(NFs,[-F|RFsW],[+F|PFs],RF):- (debugMode->write("Matched Licensee FsW: "),writeln(F);true),matchEtaChain(NFs,RFsW,PFs,RF).
-matchEtaChain(_,_,_,[[]]):-debugMode->writeln("Didn't match all");true.
+matchEtaChain(_,_,_,[[]]):- (debugMode->writeln("Didn't match all");true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % buildNewEtaLiChain(+ChainItem,+EpsLi,-EtaLi)
