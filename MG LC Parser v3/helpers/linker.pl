@@ -91,6 +91,10 @@ mergFunc(('::',[ F|Delta]),[(T2,[=F|Gamma])|FsR],Links)	:- mergFunc(('::',[ F|De
 		Links = [link('::',[ F|Delta],Gamma),link('::',[F|Delta ],Delta),link(T2,[=F|Gamma],Delta)|DeeperLinks].
 mergFunc(('::',[=F|Gamma]),[(_,[ F	   ])|FsR],Links) 	:- mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
 		Links = [link('::',[=F|Gamma],Gamma)						 |DeeperLinks].
+mergFunc((':',[=F|Gamma]),[('::',[ F	   ])|FsR],Links) 	:- mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
+		Links = [link(':',[=F|Gamma],Gamma),link('::',[F],Gamma)		|DeeperLinks].	
+mergFunc((':',[=F|Gamma]),[(':',[ F	   ])|FsR],Links) 	:- mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
+		Links = [link(':',[=F|Gamma],Gamma),link(':',[F],Gamma)		|DeeperLinks].		
 mergFunc(('::',[=F|Gamma]),[(T2,[ F|Delta])|FsR],Links) :- mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
 		Links = [link('::',[=F|Gamma]	,Gamma),link('::',[=F|Gamma]	,Delta),link(T2,[ F|Delta],Gamma)|DeeperLinks].
 mergFunc(FsB			,[(_ ,[_ |Gamma])|FsR],Links):- mergFunc(FsB,[(':',Gamma)|FsR],Links).
@@ -101,12 +105,13 @@ mergFunc(FsB			,[(_ ,[_ |Gamma])|FsR],Links):- mergFunc(FsB,[(':',Gamma)|FsR],Li
 % makes Links for Move-Rules depending on the Links provided
 % NB: nachdenken, ob ich hier schon DI zulasse
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-movFunc(link('::',[H,-F],[+F|Gamma]),[link('::',[H,-F],Gamma),link(':',[-F],Gamma)]).
+movFunc(link('::',[H,-F],[+F|Gamma]),[link('::',[H,-F],Gamma),link(':',[-F],Gamma)]). 
 movFunc(link(':',[-F],[+F|Gamma]),[link(':',[-F],Gamma)]).
-movFunc(link('::',[H,-F|Delta],[+F|Gamma]),[link('::',[H,-F|Delta],Gamma),link(':',[-F|Delta],Gamma)]).
+movFunc(link('::',[H,-F|Delta],[+F|Gamma]),[link('::',[H,-F|Delta],Gamma),link(':',[-F|Delta],Gamma)]). % version with move 1 and X = K1. Should produce some links double together with Rule 3
+%movFunc(link('::',[H,-F|Delta],[+F|Gamma]),[link(':',[-F|Delta],Gamma)]).	% version without move 1 and X = K1. Needs some additional links produced by Rule 3
 movFunc(link(':',[-F|Delta],[+F|Gamma]),[link(':',[-F|Delta],Gamma)]).
 movFunc(link('::',[H,+F|Gamma],[-F]),[link('::',[H,+F|Gamma],Gamma),link(':',[+F|Gamma],Gamma)]).
 movFunc(link(':',[+F|Gamma],[-F]),[link(':',[+F|Gamma],Gamma)]).
-movFunc(link('::',[H,+F|Gamma],[-F|Delta]),[link('::',[H,+F|Gamma],Gamma),link('::',[H,+F|Gamma],Delta),link(':',[+F|Gamma],Gamma)]).
+movFunc(link('::',[H,+F|Gamma],[-F|_]),[link('::',[H,+F|Gamma],Gamma),link(':',[+F|Gamma],Gamma)]).
 movFunc(link(':',[+F|Gamma],[-F|Delta]),[link(':',[+F|Gamma],Gamma),link(':',[+F|Gamma],Delta)]).
 movFunc(_,[]).
