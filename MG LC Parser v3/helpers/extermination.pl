@@ -21,6 +21,7 @@ debugMode:- false.
 %	Epsilon-Li: epsLi(FsE,Mark)
 %			FsE -> Feature List of the epsilon-LI
 %			Mark -> The mark if the eta-LI was used in a step from the extermination or not. "clean" if not", "dot" if yes
+%	TODO: Speichereffizeinter programmieren
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

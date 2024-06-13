@@ -14,10 +14,10 @@
 %
 % scan(+String,-[String_List])
 %
-% oberste Funktion, die einen String einliest und eine Liste an STring-Tokens ausgibt
+% oberste Funktion, die einen String einliest und eine Liste an String-Tokens ausgibt
 %
-%NB: sollte noch alle Großbuchstaben am Anfang in Kleinbuchstaben umwandeln
-%
+% NB: sollte noch alle Großbuchstaben am Anfang in Kleinbuchstaben umwandeln
+% TODO: sollte irgendwann den String nach den Exponenten in dem Lexikon aufteilen 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 scanInput("",[]).

@@ -1,0 +1,132 @@
+x link(:,[c21s],[cfin])				merge 1 mit X = C statt B		
+x link(:,[c22s],[=c2b,cfin])		merge 1 mit X = C statt B
+x link(:,[c23s],[cfin])				merge 1 mit X = C statt B
+x link(:,[c24s],[=c2b,cfin])		merge 1 mit X = C statt B
+x link(::,[c1],[+a,cfin])			merge 1 mit X = C statt B
+x link(::,[c1],[+b,cfin])			merge 1 mit X = C statt B
+x link(::,[c1],[+c,c21s])			merge 1 mit X = C statt B
+x link(::,[c1],[+c,c22s])			merge 1 mit X = C statt B
+x link(::,[c1],[+c,cfin])			merge 1 mit X = C statt B
+x link(::,[c1],[+d,c23s])			merge 1 mit X = C statt B
+x link(::,[c1],[+d,c24s])			merge 1 mit X = C statt B
+x link(::,[c1],[+d,cfin])			merge 1 mit X = C statt B
+o link(::,[c1,-a],[+a,cfin])
+o link(::,[c1,-a],[+b,cfin])
+o link(::,[c1,-a],[+c,c21s])
+o link(::,[c1,-a],[+c,c22s])
+o link(::,[c1,-a],[+c,cfin])
+o link(::,[c1,-a],[+d,c23s])
+o link(::,[c1,-a],[+d,c24s])
+o link(::,[c1,-a],[+d,cfin])
+o link(::,[c1,-a],[-a])
+o link(::,[c1,-b],[+a,cfin])
+o link(::,[c1,-b],[+b,cfin])
+o link(::,[c1,-b],[+c,c21s])
+o link(::,[c1,-b],[+c,c22s])
+o link(::,[c1,-b],[+c,cfin])
+o link(::,[c1,-b],[+d,c23s])
+o link(::,[c1,-b],[+d,c24s])
+o link(::,[c1,-b],[+d,cfin])
+o link(::,[c1,-b],[-b])
+o link(::,[c1,-b,-a,-d],[+a,cfin])
+o link(::,[c1,-b,-a,-d],[+b,cfin])
+o link(::,[c1,-b,-a,-d],[+c,c21s])
+o link(::,[c1,-b,-a,-d],[+c,c22s])
+o link(::,[c1,-b,-a,-d],[+c,cfin])
+o link(::,[c1,-b,-a,-d],[+d,c23s])
+o link(::,[c1,-b,-a,-d],[+d,c24s])
+o link(::,[c1,-b,-a,-d],[+d,cfin])
+o link(::,[c1,-b,-a,-d],[-b,-a,-d])
+o link(::,[c1,-c],[+a,cfin])
+o link(::,[c1,-c],[+b,cfin])
+o link(::,[c1,-c],[+c,c21s])
+o link(::,[c1,-c],[+c,c22s])
+o link(::,[c1,-c],[+c,cfin])
+o link(::,[c1,-c],[+d,c23s])
+o link(::,[c1,-c],[+d,c24s])
+o link(::,[c1,-c],[+d,cfin])
+o link(::,[c1,-c],[-c])
+o link(::,[c1,-c,-b,-a],[+a,cfin])
+o link(::,[c1,-c,-b,-a],[+b,cfin])
+o link(::,[c1,-c,-b,-a],[+c,c21s])
+o link(::,[c1,-c,-b,-a],[+c,c22s])
+o link(::,[c1,-c,-b,-a],[+c,cfin])
+o link(::,[c1,-c,-b,-a],[+d,c23s])
+o link(::,[c1,-c,-b,-a],[+d,c24s])
+o link(::,[c1,-c,-b,-a],[+d,cfin])
+o link(::,[c1,-c,-b,-a],[-c,-b,-a])
+o link(::,[c2b],[cfin])				merge 2 mit X = C
+x link(::,[c3e],[cfin])				merge 1 mit X = C statt B
+x link(::,[c3e],[=c2b,cfin])		merge 1 mit X = C statt B
+o link(::,[=c1,+a,cfin],[+a,cfin])
+o link(::,[=c1,+a,cfin],[-a])
+o link(::,[=c1,+a,cfin],[-b])
+o link(::,[=c1,+a,cfin],[-b,-a,-d])
+o link(::,[=c1,+a,cfin],[-c])
+o link(::,[=c1,+a,cfin],[-c,-b,-a])
+o link(::,[=c1,+b,cfin],[+b,cfin])
+o link(::,[=c1,+b,cfin],[-a])
+o link(::,[=c1,+b,cfin],[-b])
+o link(::,[=c1,+b,cfin],[-b,-a,-d])
+o link(::,[=c1,+b,cfin],[-c])
+o link(::,[=c1,+b,cfin],[-c,-b,-a])
+o link(::,[=c1,+c,c21s],[+c,c21s])
+o link(::,[=c1,+c,c21s],[-a])
+o link(::,[=c1,+c,c21s],[-b])
+o link(::,[=c1,+c,c21s],[-b,-a,-d])
+o link(::,[=c1,+c,c21s],[-c])
+o link(::,[=c1,+c,c21s],[-c,-b,-a])
+o link(::,[=c1,+c,c22s],[+c,c22s])
+o link(::,[=c1,+c,c22s],[-a])
+o link(::,[=c1,+c,c22s],[-b])
+o link(::,[=c1,+c,c22s],[-b,-a,-d])
+o link(::,[=c1,+c,c22s],[-c])
+o link(::,[=c1,+c,c22s],[-c,-b,-a])
+o link(::,[=c1,+c,cfin],[+c,cfin])
+o link(::,[=c1,+c,cfin],[-a])
+o link(::,[=c1,+c,cfin],[-b])
+o link(::,[=c1,+c,cfin],[-b,-a,-d])
+o link(::,[=c1,+c,cfin],[-c])
+o link(::,[=c1,+c,cfin],[-c,-b,-a])
+o link(::,[=c1,+d,c23s],[+d,c23s])
+o link(::,[=c1,+d,c23s],[-a])
+o link(::,[=c1,+d,c23s],[-b])
+o link(::,[=c1,+d,c23s],[-b,-a,-d])
+o link(::,[=c1,+d,c23s],[-c])
+o link(::,[=c1,+d,c23s],[-c,-b,-a])
+o link(::,[=c1,+d,c24s],[+d,c24s])
+o link(::,[=c1,+d,c24s],[-a])
+o link(::,[=c1,+d,c24s],[-b])
+o link(::,[=c1,+d,c24s],[-b,-a,-d])
+o link(::,[=c1,+d,c24s],[-c])
+o link(::,[=c1,+d,c24s],[-c,-b,-a])
+o link(::,[=c1,+d,cfin],[+d,cfin])
+o link(::,[=c1,+d,cfin],[-a])
+o link(::,[=c1,+d,cfin],[-b])
+o link(::,[=c1,+d,cfin],[-b,-a,-d])
+o link(::,[=c1,+d,cfin],[-c])
+o link(::,[=c1,+d,cfin],[-c,-b,-a])
+o link(::,[=c21s,cfin],[cfin])
+o link(::,[=c22s,=c2b,cfin],[=c2b,cfin])
+o link(::,[=c23s,cfin],[cfin])
+o link(::,[=c24s,=c2b,cfin],[=c2b,cfin])
+o link(::,[=c3e,cfin],[cfin])
+o link(::,[=c3e,=c2b,cfin],[=c2b,cfin])
+o link(::,[c1,-a],[cfin])
+o link(::,[c1,-b],[cfin])
+o link(::,[c1,-b,-a,-d],[cfin])
+o link(::,[c1,-c],[c21s])
+o link(::,[c1,-c],[c22s])
+o link(::,[c1,-c],[cfin])
+x link(::,[c1,-c,-b,-a],[c21s])		move 1 mit X = K1
+x link(::,[c1,-c,-b,-a],[c22s])		move 1 mit X = K1
+o link(::,[c1,-c,-b,-a],[cfin])		merge 3 mit X = C und Y = A
+x link(::,[=c1,+a,cfin],[cfin])		rule 2 mit X = B, B' von merge 3 und Y = H nach move 1
+x link(::,[=c1,+b,cfin],[cfin])		rule 2 mit X = B, B' von merge 3 und Y = H nach move 1 
+x link(::,[=c1,+b,cfin],[-a,-d])	rule 2 mit X = B, B' von merge 3 und Y = K1 nach move 2 
+x link(::,[=c1,+c,c21s],[c21s])		rule 2 mit X = B, B' von merge 3 und Y = K1 nach move 2 
+x link(::,[=c1,+c,c21s],[-b,-a])	rule 2 mit X = B, B' von merge 3 und Y = K1 nach move 2
+x link(::,[=c1,+c,c22s],[c22s])		rule 2 mit X = B, B' von merge 3 und Y = H nach move 1
+x link(::,[=c1,+c,c22s],[-b,-a])	rule 2 mit X = B, B' von merge 3 und Y = K1 nach move 2
+x link(::,[=c1,+c,cfin],[cfin])		rule 2 mit X = B, B' von merge 3 und Y = H nach move 1
+x link(::,[=c1,+c,cfin],[-b,-a])	rule 2 mit X = B, B' von merge 3 und Y = K1 nach move 2
