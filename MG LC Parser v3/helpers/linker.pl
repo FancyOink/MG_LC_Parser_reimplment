@@ -18,6 +18,21 @@ debugMode:- false.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+% Link-Rules are asumed to have the following form:
+% B 		-> A
+% H,K1,Kn 	-> H',K1',Kn
+% with B = H,K1,Kn and A = H',K1',Kn
+% B: Feature-chain before production rule (bottom-up)
+% H: Head-Feature-list of B
+% K1: potential chain-link which may move with H
+% Kn: any other chain-link of B or A
+% A: Feature-chain after production rule (bottom-up)
+% H': Head-Feature list of A
+% K1': potential chain-link that remained after beeing moved with H' or was added after a merge with H
+% C: potential second item/chain of a production rule (merge) that has negative active head-feature
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 % Links: link(T,[Fs_1],[Fs_2])
 %		 T	  -> Type of the Item
 %		 Fs_1 -> Feature list of the first linking partner
@@ -27,7 +42,6 @@ debugMode:- false.
 % linking(-[links(T,[Fs],[Fs])])
 %
 % top function of the Linker, calls the functions for the 3 linking rules
-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linking(NewLinks):-
 		linkRule1(LinksR1),
@@ -41,6 +55,7 @@ linking(NewLinks):-
 % linkRule1(-[link(T,[Fs],[Fs])])
 %
 % function for first linking rule
+% Output is an ordered set (to avoid duplicates)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linkRule1(LinksR1):-
 		setof(('::',FsW),W^(W :: FsW),FsL1),list_to_ord_set(FsL1,L),
@@ -51,6 +66,7 @@ linkRule1(LinksR1):-
 % linkRule2(+[link(T,[Fs],[Fs])],-[link(T,[Fs],[Fs])])
 %
 % function for second linking rule
+% Input and output are ordered sets
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linkRule2([],[]).
 linkRule2([LinksR1|LinksR1R],LinksR2):-
@@ -61,6 +77,7 @@ linkRule2([LinksR1|LinksR1R],LinksR2):-
 % linkRule1(+[link(T,[Fs],[Fs])],-[link(T,[Fs],[Fs])])
 %
 % function for third linking rule
+% Input and output are ordered sets
 % IDEE: solange rule 2 und 1 wdh, bis keine neuen Links mehr kommen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linkRule3(LinksR1,LinksR2).
@@ -87,6 +104,8 @@ mergFunc(FsB			,[(_ ,[])|FsR],Links)		:- mergFunc(FsB,FsR,Links).
 mergFunc(('::',[ F]	   ),[(_,[=F|_]) |FsR],Links)	:- mergFunc(('::',[F]),FsR,DeeperLinks),
 		%Links = [link('::',[F],Gamma)														 |DeeperLinks].
 		Links = DeeperLinks.	% um es an Stanojevic anzugleichen, kein merge1 mit X = C. Muss trotzdem abgefangen werden, um Y=[] zu vermeiden
+mergFunc(('::',[ F]   ),[(_,[_,=F|Gamma]) |FsR],Links) :- mergFunc(('::',[F]),FsR,DeeperLinks),
+		Links = [link('::',[F],Gamma),link(':',[=F|Gamma],Gamma)						|DeeperLinks].
 mergFunc(('::',[ F|Delta]),[(T2,[=F|Gamma])|FsR],Links)	:- mergFunc(('::',[ F|Delta]),FsR,DeeperLinks),
 		Links = [link('::',[ F|Delta],Gamma),link('::',[F|Delta ],Delta),link(T2,[=F|Gamma],Delta)|DeeperLinks].
 mergFunc(('::',[=F|Gamma]),[(_,[ F	   ])|FsR],Links) 	:- mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
