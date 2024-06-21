@@ -49,7 +49,12 @@ linking(NewLinks):-
 		linkRule2(LinksR1,LinksR2),
 		(debugMode -> write("Additional Links after Rule 2: "),writeln(LinksR2),write("Found "),length(LinksR2,LL2),write(LL2),writeln(" new unique Links");true),
 		list_to_ord_set(LinksR1,LR1),list_to_ord_set(LinksR2,LR2),ord_union(LR1,LR2,NonTransLinks),
-		linkRule3(NonTransLinks,NewLinks).
+		makeLinksRule(NonTransLinks), % make currents links lokal rules for use in rule 3
+		linkRule3(NonTransLinks,TransLinks),
+		ord_union(NonTransLinks,TransLinks,NewLinks),
+		(debugMode -> length(TransLinks,TL),write("Found "),write(TL),writeln(" Links after TCl"),
+			write("Links after Rule 3: "),writeln(TransLinks),
+			length(NewLinks,NL),write("Found "),write(NL),writeln(" Links all together");true). % as a safety net to get all Links
 		
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % linkRule1(-[link(T,[Fs],[Fs])])
@@ -78,10 +83,18 @@ linkRule2([LinksR1|LinksR1R],LinksR2):-
 %
 % function for third linking rule
 % Input and output are ordered sets
-% IDEE: solange rule 2 und 1 wdh, bis keine neuen Links mehr kommen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-linkRule3(LinksR1,LinksR2).
-
+linkRule3([],[]).
+linkRule3(LinksR1,LinksR2):-
+		getAllPotClos(LinksR1,PotClos),	% get all As for links with B_i. PotClos = [(T,B) - [(TA,A)]]
+		list_to_ord_set(PotClos,SetClos),	% to remove dublicates
+		(debugMode -> length(SetClos,LClos),write("Base size: "),writeln(LClos),
+			write("Base for TC: "),writeln(SetClos);true),
+		transitive_closure(SetClos,LTC),	% calculates the transitive closures
+		(debugMode -> length(LTC,LTCClos),write("Closure size: "),writeln(LTCClos),
+			write("Closures: "),writeln(LTC);true),
+		makeLTC2Links(LTC,LinksR2).
+		
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % tryMergLinks(+[(T,Fs)],+[(T,Fs)],-[link(T,[Fs],[Fs])])
 %
@@ -98,16 +111,22 @@ tryMergLinks([FsB|FsR],L,LinksR1):-
 %
 % makes Links for Merge-Rules depending on the Feature-lists provided
 % NB: nachdenken, ob ich hier schon DI zulasse
+% 	  den zweiten Item alle Features durchgehen lassen, bevor zum nächten Item gegangen wird?
+%	  eine unterteilung von negativer und positiver Liste und dann nochmal Links erstellen lasse
+% ich finde nur das erste match einer Featureliste rechts
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mergFunc(_,[],[]).
 mergFunc(FsB			,[(_ ,[])|FsR],Links)		:- mergFunc(FsB,FsR,Links).		
 mergFunc(('::',[ F]	   ),[(_,[=F|_]) |FsR],Links)	:- mergFunc(('::',[F]),FsR,DeeperLinks),
-		%Links = [link('::',[F],Gamma)														 |DeeperLinks].
+		%Links = [link('::',[F],Gamma)	|DeeperLinks].
 		Links = DeeperLinks.	% um es an Stanojevic anzugleichen, kein merge1 mit X = C. Muss trotzdem abgefangen werden, um Y=[] zu vermeiden
 mergFunc(('::',[ F]   ),[(_,[_,=F|Gamma]) |FsR],Links) :- mergFunc(('::',[F]),FsR,DeeperLinks),
 		Links = [link('::',[F],Gamma),link(':',[=F|Gamma],Gamma)						|DeeperLinks].
+mergFunc((':',[ F]   ),[(_,[_,=F|Gamma]) |FsR],Links) :- mergFunc(('::',[F]),FsR,DeeperLinks),
+		Links = [link(':',[=F|Gamma],Gamma)						|DeeperLinks].
 mergFunc(('::',[ F|Delta]),[(T2,[=F|Gamma])|FsR],Links)	:- mergFunc(('::',[ F|Delta]),FsR,DeeperLinks),
 		Links = [link('::',[ F|Delta],Gamma),link('::',[F|Delta ],Delta),link(T2,[=F|Gamma],Delta)|DeeperLinks].
+
 mergFunc(('::',[=F|Gamma]),[(_,[ F	   ])|FsR],Links) 	:- mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
 		Links = [link('::',[=F|Gamma],Gamma)						 |DeeperLinks].
 mergFunc((':',[=F|Gamma]),[('::',[ F	   ])|FsR],Links) 	:- mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
@@ -123,14 +142,54 @@ mergFunc(FsB			,[(_ ,[_ |Gamma])|FsR],Links):- mergFunc(FsB,[(':',Gamma)|FsR],Li
 %
 % makes Links for Move-Rules depending on the Links provided
 % NB: nachdenken, ob ich hier schon DI zulasse
+%	  den zweiten Item alle Features durchgehen lassen, bevor zum nächten Item gegangen wird?
+%	  eine unterteilung von negativer und positiver Liste und dann nochmal Links erstellen lasse
+% ich finde nur das erste match einer Featureliste rechts
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-movFunc(link('::',[H,-F],[+F|Gamma]),[link('::',[H,-F],Gamma),link(':',[-F],Gamma)]). 
+movFunc(link('::',[H,-F],[+F|Gamma]),[link('::',[H,-F],Gamma),link(':',[-F],Gamma)]).
+movFunc(link(':',[H,-F],[+F|Gamma]),[link(':',[H,-F],Gamma),link(':',[-F],Gamma)]).  
 movFunc(link(':',[-F],[+F|Gamma]),[link(':',[-F],Gamma)]).
 movFunc(link('::',[H,-F|Delta],[+F|Gamma]),[link('::',[H,-F|Delta],Gamma),link(':',[-F|Delta],Gamma)]). % version with move 1 and X = K1. Should produce some links double together with Rule 3
+movFunc(link(':',[H,-F|Delta],[+F|Gamma]),[link(':',[H,-F|Delta],Gamma),link(':',[-F|Delta],Gamma)]). % version with move 1 and X = K1. Should produce some links double together with Rule 3
 %movFunc(link('::',[H,-F|Delta],[+F|Gamma]),[link(':',[-F|Delta],Gamma)]).	% version without move 1 and X = K1. Needs some additional links produced by Rule 3
 movFunc(link(':',[-F|Delta],[+F|Gamma]),[link(':',[-F|Delta],Gamma)]).
 movFunc(link('::',[H,+F|Gamma],[-F]),[link('::',[H,+F|Gamma],Gamma),link(':',[+F|Gamma],Gamma)]).
+movFunc(link(':',[H,+F|Gamma],[-F]),[link(':',[H,+F|Gamma],Gamma),link(':',[+F|Gamma],Gamma)]).
 movFunc(link(':',[+F|Gamma],[-F]),[link(':',[+F|Gamma],Gamma)]).
 movFunc(link('::',[H,+F|Gamma],[-F|_]),[link('::',[H,+F|Gamma],Gamma),link(':',[+F|Gamma],Gamma)]).
+movFunc(link(':',[H,+F|Gamma],[-F|_]),[link(':',[H,+F|Gamma],Gamma),link(':',[+F|Gamma],Gamma)]).
 movFunc(link(':',[+F|Gamma],[-F|Delta]),[link(':',[+F|Gamma],Gamma),link(':',[+F|Gamma],Delta)]).
 movFunc(_,[]).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% getAllPotClos(+[link(T,[FsB],[FsA])],-[(T,B) - [(TA,A)]])
+% 
+% finds all connections from FsB to FsA
+% NB: uU werden zu viele Listen generiert, die nachher zwar 
+% 	  rausgefiltert werden, aber mehr als nötig OPs brauchen
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+getAllPotClos([],[]).
+getAllPotClos([link(T,FsB,_)|LRs],PotClos):-
+	setof((':',FsA),link(T,FsB,FsA),BaseList),
+	getAllPotClos(LRs,DeeperClos),
+	PotClos = [(T,FsB)-BaseList|DeeperClos].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% makeLinksRule(+[link(T,[Fs],[Fs])
+%
+% assertz the links
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+makeLinksRule([]).
+makeLinksRule([L1|LRs]):- assertz(L1), makeLinksRule(LRs).
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% makeLTC2Links(+[(T,B) - [(TA,A)],-[link(T,[FsB],[FsA])]).
+%
+% transforms a list of the form [(T,B) - [(TA,A)]] into a list of links
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+makeLTC2Links([],[]).
+makeLTC2Links([(_,_) - []|LRs],LinksR2):- makeLTC2Links(LRs,LinksR2).
+makeLTC2Links([(T,B) - [(_,A)|TARs]|LRs],LinksR2):-
+		makeLTC2Links([(T,B) - TARs|LRs],DeeperLinks),
+		LinksR2 = [link(T,B,A)|DeeperLinks].
+	
