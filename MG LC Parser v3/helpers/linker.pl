@@ -110,31 +110,52 @@ tryMergLinks([FsB|FsR],L,LinksR1):-
 % mergFunc(+(T,Fs),+[(T,Fs)],-[link(T,[Fs],[Fs])])
 %
 % makes Links for Merge-Rules depending on the Feature-lists provided
+% finds even merges inside of Feature-lists (Merge 2 and merge 1/3 with negative features from DI)
 % NB: nachdenken, ob ich hier schon DI zulasse
 % 	  den zweiten Item alle Features durchgehen lassen, bevor zum nächten Item gegangen wird?
 %	  eine unterteilung von negativer und positiver Liste und dann nochmal Links erstellen lasse
-% ich finde nur das erste match einer Featureliste rechts
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mergFunc((_,[]),_,[]).
 mergFunc(_,[],[]).
 mergFunc(FsB			,[(_ ,[])|FsR],Links)		:- mergFunc(FsB,FsR,Links).		
-mergFunc(('::',[ F]	   ),[(_,[=F|_]) |FsR],Links)	:- mergFunc(('::',[F]),FsR,DeeperLinks),
-		%Links = [link('::',[F],Gamma)	|DeeperLinks].
-		Links = DeeperLinks.	% um es an Stanojevic anzugleichen, kein merge1 mit X = C. Muss trotzdem abgefangen werden, um Y=[] zu vermeiden
-mergFunc(('::',[ F]   ),[(_,[_,=F|Gamma]) |FsR],Links) :- mergFunc(('::',[F]),FsR,DeeperLinks),
-		Links = [link('::',[F],Gamma),link(':',[=F|Gamma],Gamma)						|DeeperLinks].
-mergFunc((':',[ F]   ),[(_,[_,=F|Gamma]) |FsR],Links) :- mergFunc(('::',[F]),FsR,DeeperLinks),
-		Links = [link(':',[=F|Gamma],Gamma)						|DeeperLinks].
-mergFunc(('::',[ F|Delta]),[(T2,[=F|Gamma])|FsR],Links)	:- mergFunc(('::',[ F|Delta]),FsR,DeeperLinks),
-		Links = [link('::',[ F|Delta],Gamma),link('::',[F|Delta ],Delta),link(T2,[=F|Gamma],Delta)|DeeperLinks].
-
-mergFunc(('::',[=F|Gamma]),[(_,[ F	   ])|FsR],Links) 	:- mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
-		Links = [link('::',[=F|Gamma],Gamma)						 |DeeperLinks].
-mergFunc((':',[=F|Gamma]),[('::',[ F	   ])|FsR],Links) 	:- mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
-		Links = [link(':',[=F|Gamma],Gamma),link('::',[F],Gamma)		|DeeperLinks].	
-mergFunc((':',[=F|Gamma]),[(':',[ F	   ])|FsR],Links) 	:- mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
-		Links = [link(':',[=F|Gamma],Gamma),link(':',[F],Gamma)		|DeeperLinks].		
-mergFunc(('::',[=F|Gamma]),[(T2,[ F|Delta])|FsR],Links) :- mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
-		Links = [link('::',[=F|Gamma]	,Gamma),link('::',[=F|Gamma]	,Delta),link(T2,[ F|Delta],Gamma)|DeeperLinks].
+mergFunc(('::',[ F]	   ),[(T2,[=F|Gamma]) |FsR],Links)	:- mergFunc(('::',[ F]),[(T2,Gamma)],DeeperAs),
+		mergFunc(('::',[F]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,Links).	% um es an Stanojevic anzugleichen, kein merge1 mit X = C. Muss trotzdem abgefangen werden, um Y=[] zu vermeiden
+mergFunc(('::',[ F]   ),[(T2,[_,=F|Gamma]) |FsR],Links) :- mergFunc(('::',[ F]),[(T2,Gamma)],DeeperAs),
+		mergFunc(('::',[F]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link('::',[F],Gamma),link(':',[=F|Gamma],Gamma)						|DLinks].
+mergFunc((':',[ F]   ),[(T2,[=F|Gamma]) |FsR],Links) :- mergFunc((':',[ F]),[(T2,Gamma)],DeeperAs),
+		mergFunc((':',[F]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,Links).
+mergFunc((':',[ F]   ),[(T2,[_,=F|Gamma]) |FsR],Links) :- mergFunc((':',[ F]),[(T2,Gamma)],DeeperAs),
+		mergFunc((':',[F]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link(':',[=F|Gamma],Gamma)						|DLinks].
+mergFunc(('::',[ F|Delta]),[(T2,[=F|Gamma])|FsR],Links)	:- mergFunc(('::',[ F|Delta]),[(T2,Gamma)],DeeperAs),
+		mergFunc(('::',[ F|Delta]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link('::',[ F|Delta],Gamma),link('::',[F|Delta],Delta),link(T2,[=F|Gamma],Delta)|DLinks].
+mergFunc((':',[ F|Delta]),[(T2,[=F|Gamma])|FsR],Links):- mergFunc((':',[ F|Delta]),[(T2,Gamma)],DeeperAs),
+		mergFunc((':',[ F|Delta]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link(':',[ F|Delta],Gamma),link(':',[F|Delta ],Delta),link(T2,[=F|Gamma],Delta)	|DLinks].
+mergFunc(('::',[=F|Gamma]),[(T2,[ F	   ])|FsR],Links) 	:- mergFunc((':',Gamma),[(T2,[ F	   ])|FsR],DeeperAs),
+		mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link('::',[=F|Gamma],Gamma)						 |DLinks].
+mergFunc((':',[=F|Gamma]),[('::',[ F	   ])|FsR],Links) 	:- mergFunc((':',Gamma),[('::',[ F	   ])|FsR],DeeperAs),
+		mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link(':',[=F|Gamma],Gamma),link('::',[F],Gamma)		|DLinks].	
+mergFunc((':',[=F|Gamma]),[(':',[ F	   ])|FsR],Links) 	:- mergFunc((':',Gamma),[(':',[ F	   ])|FsR],DeeperAs),
+		mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link(':',[=F|Gamma],Gamma),link(':',[F],Gamma)		|DLinks].		
+mergFunc(('::',[=F|Gamma]),[(T2,[ F|Delta])|FsR],Links) :- mergFunc((':',Gamma),[(T2,[ F|Delta])|FsR],DeeperAs),
+		mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links = [link('::',[=F|Gamma]	,Gamma),link('::',[=F|Gamma]	,Delta),link(T2,[ F|Delta],Gamma),link(T2,[ F|Delta],Delta)|DLinks].
 mergFunc(FsB			,[(_ ,[_ |Gamma])|FsR],Links):- mergFunc(FsB,[(':',Gamma)|FsR],Links).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
