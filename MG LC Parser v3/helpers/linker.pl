@@ -7,7 +7,7 @@
 :- op(500, xfy, ::). % infix predicate for lexical items
 :- op(500, fx, =). % for selection features
 
-debugMode.	% comment this line, if debugMode should be off
+%debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -16,6 +16,7 @@ debugMode:- false.
 %	2. A contains an initial licensee -f and the first feature of A is +f and LINK(B,move(A)) holds
 %	3. B and A being in a transitive closure to rule (1) and (2)
 %
+%	NB: we construct B and A in a bottom-up fashion, from leafs to knots
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Link-Rules are asumed to have the following form:
@@ -61,6 +62,8 @@ linking(NewLinks):-
 %
 % function for first linking rule
 % Output is an ordered set (to avoid duplicates)
+% constructs the links regarding merge rules
+% NB: constructs new feature lists from LIs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linkRule1(LinksR1):-
 		setof(('::',FsW),W^(W :: FsW),FsL1),list_to_ord_set(FsL1,L),
@@ -72,6 +75,8 @@ linkRule1(LinksR1):-
 %
 % function for second linking rule
 % Input and output are ordered sets
+% constructs the links regarding move rules
+% NB: constructs new feature lists from Links
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linkRule2([],[]).
 linkRule2([LinksR1|LinksR1R],LinksR2):-
@@ -79,10 +84,12 @@ linkRule2([LinksR1|LinksR1R],LinksR2):-
 		list_to_ord_set(LinksMove,L1), list_to_ord_set(DeeperLinks,L2),ord_union(L1,L2,LinksR2).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% linkRule1(+[link(T,[Fs],[Fs])],-[link(T,[Fs],[Fs])])
+% linkRule3(+[link(T,[Fs],[Fs])],-[link(T,[Fs],[Fs])])
 %
 % function for third linking rule
 % Input and output are ordered sets
+% constructs the transitive closure of links from rule 1 and 2
+% NB: no new feature-lists are created here. Just new combinations of feature lists
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linkRule3([],[]).
 linkRule3(LinksR1,LinksR2):-
