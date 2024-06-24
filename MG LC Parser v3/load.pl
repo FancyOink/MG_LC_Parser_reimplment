@@ -5,10 +5,12 @@
 
 :- set_prolog_flag(encoding,utf8).
 :- use_module(library(ordsets)).
+:- use_module(library(ugraphs)).
 :- ['helpers/painter'].
 :- ['helpers/extermination'].
 :- ['helpers/linker'].
 :- ['scanner'].
+:- ['lcparser'].
 
 
 :- op(500, xfy, ::). % infix predicate for lexical items
@@ -20,3 +22,4 @@
 :-['grammars/German_trans_pruned'].
 %:-['grammars/ZahlenSprache'].
 %:-['grammars/EpsKetten'].
+%:-['grammars/German'].

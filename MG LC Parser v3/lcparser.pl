@@ -1,3 +1,4 @@
+:- module(lcparser,[lcParse/2]).
 % file: lcparser.pl
 % origin author : J. Kuhn
 % origin date: April 2023
@@ -42,5 +43,6 @@
 %  Beispiel: "drei,hundert,vier,zig"
 %			 "drei"
 %			 "drei,hundert"
+%  Nutze \+ \+ zur Abfrage von Links ohne Variablen zu instanzieren
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lcParse([Token|TokenS],Tree).

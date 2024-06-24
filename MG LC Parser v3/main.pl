@@ -8,35 +8,28 @@
 mainDebug.	% comment this line, if debugMode should be off
 mainDebug :- false.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% rememberEta(+[Lis])
-%
-%	assertz Eta-Lis
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-rememberEta([]).
-rememberEta([Li|Lis]):- assertz(Li),rememberEta(Lis).
+:- (mainDebug -> protocol('mylog.txt');true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% rememberEps(+[Lis])
+% rememberLink(+[Links])
 %
-%	assertz Epsilon-Lis with the Mark = clean
+%	assertz Links
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-rememberEps([]).
-rememberEps([epsLi(FsE,clean)|Lis]):- assertz(epsLi(FsE,clean)),rememberEps(Lis).
-rememberEps([epsLi(_,dot)|Lis]):- rememberEps(Lis).
+rememberLink([]).
+rememberLink([Link|Links]):- assertz(Link),rememberLink(Links).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % linking(-[Links(X,Y)])
 %
 % generates LINKS from given (transformed) MG-lexicon
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%:-linking(Links).
+:- linking(T),rememberLink(T).
 
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Hauptfunktion des Parsers
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-mgParse(Input,Lambda,Tree):- 
+parse(Input,Lambda,Tree):- 
 			scanInput(Input,TokenList),
 			lcParse(TokenList,Tree),
 			makeLambda(Tree,Lambda). % TODO: Hier später Tree -> MGTree
