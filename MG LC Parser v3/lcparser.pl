@@ -147,15 +147,15 @@ checkCat(_).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc1([bRule(S,::,[=F|FsS])|Ws],InTree,OutWs,OutTree):- 	append(S,T,ST),checkFsRule(ST,:,FsS,ARule),
 														OutWs = [pre(cRule(T,_Dot,[F]),ARule)|Ws],% merge 1
-														buildTree(merge1,InTree,OutTree).
+														buildTree(lcMerge1,InTree,OutTree).
 lc1([bRule(S,:,[=F|FsS])|Ws],InTree,OutWs,OutTree):-  	append(T,S,TS),checkFsRule(TS,:,FsS,ARule),
 														OutWs = [pre(cRule(T,_Dot,[F]),ARule)|Ws],% merge 2
-														buildTree(merge2,InTree,OutTree).
+														buildTree(lcMerge2,InTree,OutTree).
 lc1([bRule(S,:,[=F|FsS])|Ws],InTree,OutWs,OutTree):- 	OutWs = [pre(cRule(T,_Dot,[F|FsT]),[bRule(S,:,FsS),cRule(T,:,FsT)])|Ws], % merge 3
-														buildTree(merge3,InTree,OutTree).
+														buildTree(lcMerge3,InTree,OutTree).
 lc1([[bRule(S,:,[+F|FsS])|Rules]|Ws],InTree,OutWs,OutTree):- checkSMC(Rules),checkMove(bRule(S,:,[+F|FsS]),Rules,ARule), % move 1 + 2
 														OutWs = [ARule|Ws],
-														buildTree(move,InTree,OutTree).
+														buildTree(lcMove,InTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % lc2(+[WS],+[Tree],-[WS],-[Tree])
 %
@@ -167,9 +167,9 @@ lc1([[bRule(S,:,[+F|FsS])|Rules]|Ws],InTree,OutWs,OutTree):- checkSMC(Rules),che
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc2([cRule(T,_,[ F])|Ws],InTree,OutWs,OutTree):- 		append(T,S,TS),
 														OutWs = [pre(bRule(S,_Dot,[=F|FsS]),[aRule(TS,:,FsS)])|Ws], 	% merge 2, because I do not know if the bRule  becomes a cRole or bRole, aRule is a placeholder
-														buildTree(merge2,InTree,OutTree).
+														buildTree(lcMerge2,InTree,OutTree).
 lc2([cRule(T,_,[ F|FsT])|Ws],InTree,OutWs,OutTree):- 	OutWs = [pre(bRule(S,_Dot,[=F|FsS]),[bRule(S,:,FsS),cRule(T,:,FsT)])|Ws],	% merge 3
-														buildTree(merge3,InTree,OutTree).
+														buildTree(lcMerge3,InTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%														
 % checkMove(+bRule,+[cRules],-[Rule])
 %
@@ -236,9 +236,40 @@ c3(InWs,OutWs).
 % buildTree(+MG-Rule,+Position,+[Tree],-[Tree])
 %
 % constructs a tree out of the first element of the input tree list
+% NB: 	- ggf. Ketten genauer bestimmen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-buildTree(merge1,InTree,OutTree).
-buildTree(merge2,InTree,OutTree).
-buildTree(merge3,InTree,OutTree).
-buildTree(merge2,InTree,OutTree).
-buildTree(merge3,InTree,OutTree).
+buildTree(lcMerge1,[li(S,[=F|FsS])|Trees],OutTrees):- % For position B = LI
+	OutTrees = [tree([([S|_T],FsS)|_NewChains],li(S,[=F|FsS]),_RightTreeC)|Trees].	
+buildTree(lcMerge2,[tree([(S,[=F|FsS])|AlphaChains],LeftTreeB2,LeftTreeB2)|Trees],OutTrees):- % For position B = DI
+	OutTrees = [tree([([_T|S],FsS)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB2,LeftTreeB2),_RightTreeC1)|Trees]. 
+buildTree(lcMerge2,[li(T,[ F])|Trees],OutTrees):- % For position C = LI
+	checkCat(F),
+	OutTrees = [tree([([T|S],FsS)|_NewChains],tree([(S,[=F|FsS])|_AlphaChains],_LeftTreeB,_RightTreeB),li(T,[ F]))|Trees].	
+buildTree(lcMerge2,[tree([(T,[ F])|BetaChains],LeftTreeC2,LeftTreeC2)|Trees],OutTrees):- % For position C = DI
+	checkCat(F),
+	OutTrees = [tree([([T|S],FsS)|_NewChains],tree([(S,[=F|FsS])|_AlphaChains],_LeftTreeB2,_RightTreeB2),tree([(T,[ F]|BetaChains)],LeftTreeC2,LeftTreeC2))|Trees]. 
+buildTree(lcMerge3,[tree([(S,[=F|FsS]|AlphaChains)],LeftTreeB2,LeftTreeB2)|Trees],OutTrees):-
+	OutTrees = [tree([(S,FsS),(_T,_FsT)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB2,LeftTreeB2),_RightTreeC1)|Trees]. % For Position B = DI
+buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):-% For Position B = LI
+	OutTrees = [tree([(S,FsS),(_T,_FsT)|_NewChains],li(S,[=F|FsS]),_RightTreeC1)|Trees]. 
+buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI
+	checkCat(F),
+	OutTrees = [tree([(_S,_FsS),(T,FsT)|_NewChains],_LeftTreeB1,li(T,[ F|FsT]))|Trees]. 
+buildTree(lcMerge3,[tree([(T,[ F|FsT])|BetaChains],LeftTreeC2,LeftTreeC2)|Trees],OutTrees):- % For Position C = DI
+	checkCat(F),
+	OutTrees = [tree([(_S,_FsS),(T,FsT)|_NewChains],_LeftTreeB1,tree([(T,[ F|FsT])|BetaChains],LeftTreeC2,LeftTreeC2))|Trees]. 
+buildTree(lcMove,[tree([FChain|RsChain],LeftTreeB1,RightTreeB1)|Trees],OutTrees):-
+	checkTreeMove(FChain,RsChain,NewChain),
+	OutTrees = [tree(NewChain,empty,tree([FChain|RsChain],LeftTreeB1,RightTreeB1))|Trees].
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% checkTreeMove(+ChainItem,+[ChainItems],-[ChainItems])
+%
+% checks in the chains for the correct Chain item to move. SMC was already checked beforehand
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkTreeMove(Head,[],_):-!,write("Error: checkTreeMove: Found no Match for Move for: "), writeln(Head),false. % should never reach
+checkTreeMove((S,[+F|FsS]),[(T,[-F])|RsChain],NewChain):- append(T,S,TS), % move 1
+	NewChain = [(TS,FsS)|RsChain].
+checkTreeMove((S,[+F|FsS]),[(T,[-F|FsT])|RsChain],NewChain):- % move 2
+	NewChain = [(S,FsS),(T,FsT)|RsChain].
+checkTreeMove(FChain,[KChain|RsChain],NewChain):- checkTreeMove(FChain,RsChain,[NewFChain|NewRsChain]),
+	NewChain = [NewFChain,KChain|NewRsChain].
