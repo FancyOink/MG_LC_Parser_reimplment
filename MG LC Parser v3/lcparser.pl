@@ -26,19 +26,6 @@ debugMode:- false.
 %			1. B C -> A (merge) -> Konvention: B hat immer ein positives Feature als Head
 %			2. B   -> A (move)
 %----------------------------------------------------------
-%		-lc1(R); R = MG-Rule
-%		=> gegeben R = R1 und einem B: ersetze B durch C -> A
-%			- merge 1
-%			- merge 2
-%			- merge 3
-%		=> gegben R = R2 und einem B: ersetze B durch A
-%			- move 1
-%			- move 2
-%		-lc2(R)
-%		=> gegeben R = 1 und einem C: ersetze C durch B -> A
-%			- merge 2
-%			- merge 3	
-%----------------------------------------------------------
 %		-c(R) ; R = lc-Rule
 %		-c1(R)
 %		-c2(R)
@@ -71,6 +58,7 @@ lcParse(Tokens,Tree):-
 % Finished Parse-Tree at the "Bottom"
 % NB: 	- die Move-Fälle für lc1(R) mehr drüber nachdenken
 %		- die Closure-Fälle genauer abgrenzen 
+%		- Ketten
 %		- Abfrage genauer LC- und C-Regeln in eigene Funktion?
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 parseF([],[cRule(W,::,[cfin])],[li(W,[cfin])],[],[cRule(W,::,[cfin])],[li(W,[cfin])]). % special end condition for Tree = 1 leaf
@@ -79,7 +67,7 @@ parseF(Input,[],[],OutPut,OutWs,OutTree):- 	shift(Input,RestPut,[LI]),	% First A
 											makeWsRule(LI,WsRule),
 											(debugMode->write("parseF: new Ws-Rule: "),writeln(WsRule);true),
 											parseF(RestPut,[WsRule],[LI],OutPut,OutWs,OutTree).
-parseF(Input,[pre(B,A,C)|Ws],InTree,OutPut,OutWs,OutTree):- checkCNRule(Input,[pre(B,A,C)|Ws],InTree,InterPut,InterWs,InterTree), % CN-Rules before LC-Rules, because they overlap them
+parseF(Input,Ws,InTree,OutPut,OutWs,OutTree):- checkCNRule(Input,Ws,InTree,InterPut,InterWs,InterTree), % CN-Rules before LC-Rules, because they overlap them
 															parseF(InterPut,InterWs,InterTree,OutPut,OutWs,OutTree).
 parseF(Input,[bRule(W,T,Fs)|Ws],InTree,OutPut,OutWs,OutTree):-  lc1([bRule(W,T,Fs)|Ws],InTree,InterWs,InterTree), % LC-Rules 1 merge
 																parseF(Input,InterWs,InterTree,OutPut,OutWs,OutTree).
@@ -96,7 +84,7 @@ parseF(Input,Ws,InTree,OutPut,OutWs,OutTree):-  shift(Input,RestPut,[LI]),	% Las
 % shift(+[Token],-[Token],-LI)
 % 
 % shifted the first Token of a list out and returns a corresponding LI
-% NB: 	- Vieleicht ich Zukunft eine Präferenz für spezielle Fs einbauen
+% NB: 	- Vieleicht in Zukunft eine Präferenz für spezielle Fs einbauen
 %		- oder den Shift durch den Workspace vorsortieren
 %		- shift von epsilon-LI erlauben
 %		- Abfrage Links?
@@ -143,7 +131,8 @@ checkCat(_).
 %		=> given R = R2 and a B: replace B for A
 %			R2:		- move 1
 %					- move 2
-%	NB: Link abfrage einbauen
+%	NB: - Link abfrage einbauen
+%		- Ketten bei bRules und cRules bedenken
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc1([bRule(S,::,[=F|FsS])|Ws],InTree,OutWs,OutTree):- 	append(S,T,ST),checkFsRule(ST,:,FsS,ARule),
 														OutWs = [pre(cRule(T,_Dot,[F]),ARule)|Ws],% merge 1
@@ -151,11 +140,19 @@ lc1([bRule(S,::,[=F|FsS])|Ws],InTree,OutWs,OutTree):- 	append(S,T,ST),checkFsRul
 lc1([bRule(S,:,[=F|FsS])|Ws],InTree,OutWs,OutTree):-  	append(T,S,TS),checkFsRule(TS,:,FsS,ARule),
 														OutWs = [pre(cRule(T,_Dot,[F]),ARule)|Ws],% merge 2
 														buildTree(lcMerge2,InTree,OutTree).
-lc1([bRule(S,:,[=F|FsS])|Ws],InTree,OutWs,OutTree):- 	OutWs = [pre(cRule(T,_Dot,[F|FsT]),[bRule(S,:,FsS),cRule(T,:,FsT)])|Ws], % merge 3
+lc1([bRule(S,:,[=F|FsS])|Ws],InTree,OutWs,OutTree):- 	checkFsRule(S,FsS,ARule),
+														OutWs = [pre(cRule(T,_Dot,[F|FsT]),[ARule,cRule(T,:,FsT)])|Ws], % merge 3
 														buildTree(lcMerge3,InTree,OutTree).
 lc1([[bRule(S,:,[+F|FsS])|Rules]|Ws],InTree,OutWs,OutTree):- checkSMC(Rules),checkMove(bRule(S,:,[+F|FsS]),Rules,ARule), % move 1 + 2
 														OutWs = [ARule|Ws],
 														buildTree(lcMove,InTree,OutTree).
+lc1([[bRule(S,:,[=F|FsS])|Rules]|Ws],InTree,OutWs,OutTree):- append(T,S,TS),
+														checkFsRule(TS,:,FsS,ARule),
+														OutWs = [pre(cRule(T,_Dot,[F|FsT]),[ARule,cRule(T,:,FsT)|Rules])|Ws], %merge 2
+														buildTree(lcMerge3,InTree,OutTree).
+lc1([[bRule(S,:,[=F|FsS])|Rules]|Ws],InTree,OutWs,OutTree):- checkFsRule(S,FsS,ARule),
+														OutWs = [pre(cRule(T,_Dot,[F|FsT]),[ARule,cRule(T,:,FsT)|Rules])|Ws], %merge 3
+														buildTree(lcMerge3,InTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % lc2(+[WS],+[Tree],-[WS],-[Tree])
 %
@@ -163,18 +160,20 @@ lc1([[bRule(S,:,[+F|FsS])|Rules]|Ws],InTree,OutWs,OutTree):- checkSMC(Rules),che
 %		=> given R = R1 and a C: replace C for B -> A
 %			R1:		- merge 2
 %					- merge 3	
-%	NB: Link abfrage einbauen
+%		aRule is a placeholder
+%		because I do not know if the bRule becomes a cRule or bRule
+%	NB: - Link abfrage einbauen
+%		- Ketten bei bRules und cRules bedenken
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc2([cRule(T,_,[ F])|Ws],InTree,OutWs,OutTree):- 		append(T,S,TS),
-														OutWs = [pre(bRule(S,_Dot,[=F|FsS]),[aRule(TS,:,FsS)])|Ws], 	% merge 2, because I do not know if the bRule  becomes a cRole or bRole, aRule is a placeholder
+														OutWs = [pre(bRule(S,_Dot,[=F|FsS]),[aRule(TS,:,FsS)])|Ws], 	% merge 2, because I do not know if the bRule becomes a cRule or bRule, aRule is a placeholder
 														buildTree(lcMerge2,InTree,OutTree).
-lc2([cRule(T,_,[ F|FsT])|Ws],InTree,OutWs,OutTree):- 	OutWs = [pre(bRule(S,_Dot,[=F|FsS]),[bRule(S,:,FsS),cRule(T,:,FsT)])|Ws],	% merge 3
+lc2([cRule(T,_,[ F|FsT])|Ws],InTree,OutWs,OutTree):- 	OutWs = [pre(bRule(S,_Dot,[=F|FsS]),[aRule(S,:,FsS),cRule(T,:,FsT)])|Ws],	% merge 3, because I do not know if the bRule becomes a cRule or bRule, aRule is a placeholder
 														buildTree(lcMerge3,InTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%														
 % checkMove(+bRule,+[cRules],-[Rule])
 %
-% checks if any Moves can be done 
-% 
+% checks if any Moves can be done (legally)  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkMove(bRule(S,:,[+F|FsS]),[cRule(T,:,[-F])|Rules],ARule):-	append(T,S,TS),checkFsRule(TS,:,FsS,NewRule),
 																append(NewRule,Rules,ARule).
@@ -205,27 +204,44 @@ checkFsRule(W,T,[ F|Fs],[ARule]):- checkCat(F),ARule = cRule(W,T,[ F|Fs]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkCNRule(+[Strin],+[WS],+[Tree],-[String],-[WS],-[Tree])
 %
-%	check if a CN-Rule can be applied
+%	check if a CN-Rule can be applied, commit to the chosen checkCNRule
+%	NB: nachprüfen, ob ! bei ALLEN Regeln nötig ist
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-checkCNRule(Input,[pre(B,A)|Ws],InTree,InterPut,InterWs,InterTree).
+checkCNRule(_,[],_,_,_,_):- !,false.
+checkCNRule(Input,[pre(cRule(_,_,FsT),A)|Ws],InTree,InterPut,InterWs,InterTree):-!,checkWS(FsT,Ws,PreRule,NewWs).%shift?
+checkCNRule(Input,[pre(bRule(_,_,FsS),A)|Ws],InTree,InterPut,InterWs,InterTree):-!,checkWS(FsS,Ws,PreRule,NewWs).%shift?
+checkCNRule(Input,[pre(aRule(_,_,Fs),A)|Ws],InTree,InterPut,InterWs,InterTree):-!,checkWS(Fs,Ws,PreRule,NewWs).%shift?
+checkCNRule(Input,[bRule(S,Dot,FsS)|Ws],InTree,InterPut,InterWs,InterTree):- !,checkWS(FsS,Ws,PreRule,NewWs).%lc1(Merges)
+checkCNRule(Input,[[bRule(S,:,[+F|FsS])|Rules]|Ws],InTree,InterPut,InterWs,InterTree):- !.% lc1(Moves)
+checkCNRule(Input,[cRule(T,Dot,FsT)|Ws],InTree,InterPut,InterWs,InterTree):-!.%lc2(Merges)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% c(+[Ws],-[Ws])
+% c0(+[Ws],-[Ws])
 %
+%	given pre(B,A) in Workspace and LC-Rule, which produces B (lc1(move1),lc1(move2),shift)
+%	=> delete pre(B,A) and return A (cRule,bRule,aRule)
+%	NB: nachdenken, ob aRule üverhaupt vorkommen kann hier
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-c(InWs,OutWs).
+c0(InWs,OutWs).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % c1(+[Ws],-[Ws])
 %
+% 	given pre(C,B) in Workspace and LC-Rule, which produces pre(B,A)
+%	=> delete pre(C,B) and return pre(C,A)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c1(InWs,OutWs).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % c2(+[Ws],-[Ws])
 %
+%	given pre(B,A) in Workspace and LC-Rule, which produces pre(C,B)
+%	=> delte pre(B,A) and return pre(C,A)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c2(InWs,OutWs).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % c3(+[Ws],-[Ws])
 %
+%	given pre(B,A) and pre(D,C) in Workspace and LC-Rule, 
+%	which produces pre(C,B)
+%	=> delete pre(B,A) and pre(D,C) and return pre(D,A)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c3(InWs,OutWs).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
