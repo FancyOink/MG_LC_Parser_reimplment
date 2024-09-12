@@ -63,7 +63,7 @@ lcParse(Tokens,Tree):-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 parseF([],[cRule(W,::,[cfin])],[li(W,[cfin])],[],[cRule(W,::,[cfin])],[li(W,[cfin])]). % special end condition for Tree = 1 leaf
 parseF([],[cRule(W,:,[cfin])],[tree([(W,[cfin])],LTree,RTree)],[],[cRule(W,:,[cfin])],[tree([(W,[cfin])],LTree,RTree)]). % normal end condition
-parseF(Input,[],[],OutPut,OutWs,OutTree):- 	shift(Input,RestPut,[LI]),	% First Action of the Parse
+parseF(Input,[],[],OutPut,OutWs,OutTree):- 	shift(Input,RestPut,LI),	% First Action of the Parse
 											makeWsRule(LI,WsRule),
 											(debugMode->write("parseF: new Ws-Rule: "),writeln(WsRule);true),
 											parseF(RestPut,[WsRule],[LI],OutPut,OutWs,OutTree).
@@ -81,15 +81,16 @@ parseF(Input,Ws,InTree,OutPut,OutWs,OutTree):-  shift(Input,RestPut,[LI]),	% Las
 												parseF(RestPut,[WsRule|Ws],[LI|InTree],OutPut,OutWs,OutTree).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% shift(+[Token],-[Token],-LI)
+% shift(+[Token],-[Token],-[LI])
 % 
 % shifted the first Token of a list out and returns a corresponding LI
 % NB: 	- Vieleicht in Zukunft eine Präferenz für spezielle Fs einbauen
 %		- oder den Shift durch den Workspace vorsortieren
 %		- shift von epsilon-LI erlauben
 %		- Abfrage Links?
+%		- Auswahl des LI implementieren -> LINKS? Anfangsbedingung? etc.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-shift([H|HRs],HRs,LI):- setof(li([H],Fs),([H] :: Fs),LI),
+shift([H|HRs],HRs,LI):- LI = li([H],Fs),[H] :: Fs,
 	(debugMode->write("shift: LI: "),writeln(LI);true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
