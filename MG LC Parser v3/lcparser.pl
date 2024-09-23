@@ -6,7 +6,12 @@
 debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% MG mit Semantik
+% TODO: - buildCTree
+%		- buildC0Tree
+%		- Prüfen von LINK(X,Y) einfügen
+%		- epsilon-LI erlauben
+%		- protocol the parse-steps as an option/default
+% MG with Semantics
 % merge   -> tree([([W],[Fs],L)],Subtree1,Subtree2)
 % move    -> tree([([W],[Fs],L)],empty   ,Subtree)
 % LexItem ->   li( [W],  [Fs], L)
@@ -20,17 +25,17 @@ debugMode:- false.
 % Derived Item -> di([W],[Fs])
 % unspecified Item -> ti([W],[Fs])
 %
-% Item forms used in Workspace: 
-% cRule(W,{::,:,*},Fs,[chainL(W,Fs)]) % Item with negative head feature
-% bRule(W,{::,:,*},Fs,[chainL(W,Fs)]) % Item with positive head feature
-% aRule(W,{::,:,*},Fs,[chainL(W,Fs)]) % Item with unknown type of head feature
+% Item forms used in Workspace (WS): 
+% cR(W,{::,:,*},Fs,(PosL,PosR),[chainL(W,Fs,PosCh)]) % Item with negative head feature
+% bR(W,{::,:,*},Fs,(PosL,PosR),[chainL(W,Fs,PosCh)]) % Item with positive head feature
+% aR(W,{::,:,*},Fs,(PosL,PosR),[chainL(W,Fs,PosCh)]) % Item with unknown type of head feature
 % chainL(W,Fs) % Chain link of an Item
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TODO: implementiere Regeln
 %----------------------------------------------------------
-%	Formen an MG-Regeln:
-%			1. B C -> A (merge) -> Konvention: B hat immer ein positives Feature als Head
+%	Forms of MG-Rules:
+%			1. B C -> A (merge) -> Konvention: B has always a positive Feature as Head, C has always a negative Feature as Head
 %			2. B   -> A (move)
+%			3. A 		(shift)
 %----------------------------------------------------------
 %		-c(R) ; R = lc-Rule
 %		-c1(R)
@@ -39,11 +44,13 @@ debugMode:- false.
 %----------------------------------------------------------
 % prediction C => A, because if a B -> pre(C,A)
 % pre(C,A) and C will result in tree(A',B')
-% C: cRule(W,{::,:,*},Fs,[chainL(W,Fs)])
-% B: bRule(W,{::,:,*},Fs,[chainL(W,Fs)])
-% A: bRule or cRule depending on Fs (head feature positve -> bRule; head feature negative -> cRule)
+% C: cR(W,{::,:,*},Fs,(PosL,PosR),[chainL(W,Fs,PosCh)])
+% B: bR(W,{::,:,*},Fs,(PosL,PosR),[chainL(W,Fs,PosCh)])
+% A: bR or cR depending on Fs (head feature positve -> bR; head feature negative -> cR)
+% PosL is the position left of the token
+% PosR is the position right of the token
 %----------------------------------------------------------
-%  Beispiel: "drei,hundert,vier,zig"
+%  Example: "drei,hundert,vier,zig"
 %			 "sieben,und,drei,ßig"
 %			 "drei"
 %			 "drei,hundert"
@@ -54,43 +61,41 @@ debugMode:- false.
 % top most parse function to the outside
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lcParse(Tokens,Tree):- 
-	parseF(Tokens,[],[],OutPut,OutWs,Tree),
+	parseF(0,Tokens,[],[],OutPut,OutWs,Tree),
 	(debugMode ->write("lcParse: WS: "),write(OutWs),write(" Output: "),writeln(OutPut),
 		write("lcParse: Tree: "),writeln(Tree);true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% parseF(+[Tokens],+[WS],+[Trees],-[Tokens],-[WS],-[Trees])
+% parseF(+Position,+[Tokens],+[WS],+[Trees],-[Tokens],-[WS],-[Trees])
 %	
 % main parse function. Controlls the parse
 % Finished Parse-Tree at the "Bottom"
-% NB: 	- die Move-Fälle für lc1(R) mehr drüber nachdenken
-%		- die Closure-Fälle genauer abgrenzen 
-%		- Abfrage genauer LC- und C-Regeln in eigene Funktion?
+% Position is the current left most position of the string with regards to the original input string
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-parseF([],[cRule(W,::,[cfin],[])],[li(W,[cfin])],[],[cRule(W,::,[cfin],[])],[li(W,[cfin])]). % special end condition for Tree = 1 leaf
-parseF([],[cRule(W,:,[cfin],[])],[tree([(W,[cfin])],LTree,RTree)],[],[cRule(W,:,[cfin],[])],[tree([(W,[cfin])],LTree,RTree)]). % normal end condition
-parseF(Input,[],[],OutPut,OutWs,OutTree):- 	shift(Input,RestPut,LI),	% First Action of the Parse
-											makeWsRule(LI,WsRule),
-											(debugMode->write("parseF: new Ws-Rule: "),writeln(WsRule);true),
-											parseF(RestPut,[WsRule],[LI],OutPut,OutWs,OutTree).
-parseF(Input,[bRule(W,T,Fs,Chain)|Ws],InTree,OutPut,OutWs,OutTree):-  lc1([bRule(W,T,Fs,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 1 merge
-																(checkCNRule(LCRule,InterWs,LCTree,InterTree,CNWs,CNTree), % check if something clicks with WS
-																parseF(Input,CNWs,CNTree,OutPut,OutWs,OutTree);
-																parseF(Input,[LCRule|InterWs],[LCTree|InterTree],OutPut,OutWs,OutTree)).
-parseF(Input,[[bRule(W,T,Fs,Chain)|RsRule]|Ws],InTree,OutPut,OutWs,OutTree):-  lc1([[bRule(W,T,Fs,Chain)|RsRule]|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 1 move
-																(checkCNRule(LCRule,InterWs,LCTree,InterTree,CNWs,CNTree), % check if something clicks with WS
-																parseF(Input,CNWs,CNTree,OutPut,OutWs,OutTree);
-																parseF(Input,[LCRule|InterWs],[LCTree|InterTree],OutPut,OutWs,OutTree)).
-parseF(Input,[cRule(W,T,Fs,Chain)|Ws],InTree,OutPut,OutWs,OutTree):-  lc2([cRule(W,T,Fs,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 2
-																(checkCNRule(LCRule,InterWs,LCTree,InterTree,CNWs,CNTree), % check if something clicks with WS
-																parseF(Input,CNWs,CNTree,OutPut,OutWs,OutTree);
-																parseF(Input,[LCRule|InterWs],[LCTree|InterTree],OutPut,OutWs,OutTree)).
-parseF(Input,Ws,InTree,OutPut,OutWs,OutTree):-  shift(Input,RestPut,[LI]),	% Last to try shift
-												makeWsRule(LI,WsRule),
-												(debugMode->write("parseF: new Ws-Rule: "),writeln(WsRule);true),
-												(checkCNRule(RestPut,[WsRule|Ws],[LI|InTree],CNPut,CNWs,CNTree), % check if something clicks with WS
-												parseF(CNPut,CNWs,CNTree,OutPut,OutWs,OutTree);
-												parseF(RestPut,[WsRule|Ws],[LI|InTree],OutPut,OutWs,OutTree)).
+parseF(_,[],[cR(W,::,[cfin],Pos,[])],[li(W,[cfin])],[],[cR(W,::,[cfin],Pos,[])],[li(W,[cfin])]). % special end condition for Tree = 1 leaf
+parseF(_,[],[cR(W,:,[cfin],Pos,[])],[tree([(W,[cfin])],LTree,RTree)],[],[cR(W,:,[cfin],Pos,[])],[tree([(W,[cfin])],LTree,RTree)]). % normal end condition
+parseF(Pos,Input,[],[],OutPut,OutWs,OutTree):- 	
+	shift(Pos,Input,NewPos,RestPut,LI),	% First Action of the Parse
+	makeWsRule(Pos,NewPos,LI,WsRule),
+	(debugMode->write("parseF: new Ws-Rule: "),writeln(WsRule);true),
+	parseF(NewPos,RestPut,[WsRule],[LI],OutPut,OutWs,OutTree).
+parseF(Pos,Input,[bR(W,T,Fs,PosB,Chain)|Ws],InTree,OutPut,OutWs,OutTree):-  
+	lc1([bR(W,T,Fs,PosB,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 1
+	(checkCN(LCRule,InterWs,LCTree,InterTree,CNWs,CNTree), % check if something clicks with WS
+	parseF(Pos,Input,CNWs,CNTree,OutPut,OutWs,OutTree);
+	parseF(Pos,Input,[LCRule|InterWs],[LCTree|InterTree],OutPut,OutWs,OutTree)).
+parseF(Pos,Input,[cR(W,T,Fs,PosC,Chain)|Ws],InTree,OutPut,OutWs,OutTree):-  
+	lc2([cR(W,T,Fs,PosC,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 2
+	(checkCN(LCRule,InterWs,LCTree,InterTree,CNWs,CNTree), % check if something clicks with WS
+	parseF(Pos,Input,CNWs,CNTree,OutPut,OutWs,OutTree);
+	parseF(Pos,Input,[LCRule|InterWs],[LCTree|InterTree],OutPut,OutWs,OutTree)).
+parseF(Pos,Input,Ws,InTree,OutPut,OutWs,OutTree):-  
+	shift(Pos,Input,NewPos,RestPut,[LI]),	% Last to try shift
+	makeWsRule(LI,WsRule),
+	(debugMode->write("parseF: new Ws-Rule: "),writeln(WsRule);true),
+	(checkCN(RestPut,[WsRule|Ws],[LI|InTree],CNPut,CNWs,CNTree), % check if something clicks with WS
+	parseF(NewPos,CNPut,CNWs,CNTree,OutPut,OutWs,OutTree);
+	parseF(NewPos,RestPut,[WsRule|Ws],[LI|InTree],OutPut,OutWs,OutTree)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % shift(+[Token],-[Token],-[LI])
@@ -99,27 +104,26 @@ parseF(Input,Ws,InTree,OutPut,OutWs,OutTree):-  shift(Input,RestPut,[LI]),	% Las
 % NB: 	- Vieleicht in Zukunft eine Präferenz für spezielle Fs einbauen
 %		- oder den Shift durch den Workspace vorsortieren
 %		- shift von epsilon-LI erlauben
-%		- Abfrage Links?
 %		- Auswahl des LI implementieren -> LINKS? Anfangsbedingung? etc.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-shift([H|HRs],HRs,LI):- LI = li([H],Fs),[H] :: Fs,
+shift(Pos,[H|HRs],NewPos,HRs,LI):- LI = li([H],Fs),[H] :: Fs,
+	NewPos is Pos + 1,
 	(debugMode->write("shift: LI: "),writeln(LI);true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % makeWsRule(+[LI],-WsRule)
 %
 %	transform a LI into a:
-%						- cRule if head feature is negative
-%						- bRule if head feature is positive
+%						- cR if head feature is negative
+%						- bR if head feature is positive
 % currently all di are superfluous, since nothing currently creates di
-% NB: Die Move-Regeln nachschärfen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-makeWsRule(li(W,[=F|Fs]),bRule(W,::,[=F|Fs],[])).
-makeWsRule(di(W,[=F|Fs]),bRule(W,: ,[=F|Fs],[])).
-makeWsRule(di(W,[+F|Fs]),bRule(W,: ,[+F|Fs],[])).
-makeWsRule(di(W,[-F|Fs]),cRule(W,: ,[-F|Fs],[])).
-makeWsRule(li(W,[ F|Fs]),CRule):- checkCat(F), CRule = cRule(W,::,[ F|Fs],[]).
-makeWsRule(di(W,[ F|Fs]),CRule):- checkCat(F), CRule = cRule(W,: ,[ F|Fs],[]).
+makeWsRule(PosL,PosR,li(W,[=F|Fs]),bR(W,::,[=F|Fs],(PosL,PosR),[])).
+makeWsRule(PosL,PosR,di(W,[=F|Fs]),bR(W,: ,[=F|Fs],(PosL,PosR),[])).
+makeWsRule(PosL,PosR,di(W,[+F|Fs]),bR(W,: ,[+F|Fs],(PosL,PosR),[])).
+makeWsRule(PosL,PosR,di(W,[-F|Fs]),cR(W,: ,[-F|Fs],(PosL,PosR),[])).
+makeWsRule(PosL,PosR,li(W,[ F|Fs]),CRule):- checkCat(F), CRule = cR(W,::,[ F|Fs],(PosL,PosR),[]).
+makeWsRule(PosL,PosR,di(W,[ F|Fs]),CRule):- checkCat(F), CRule = cR(W,: ,[ F|Fs],(PosL,PosR),[]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkCat(+Fs)
 %
@@ -138,123 +142,216 @@ checkCat(_).
 % lc1(+[WS],+[Tree],-[WS],-[Tree])
 % 
 %		-lc1(R); R = MG-Rule
-%		=> given R= R1 and a B: replace B for C -> A
-%			R1: 	- merge 1
+%		=> given R= R1 and a B is in WS: replace B for C -> A
+%			R1: - merge 1
 %				- merge 2
 %				- merge 3
 %		=> given R = R2 and a B: replace B for A
 %			R2:		- move 1
 %					- move 2
-%	NB: - Link abfrage einbauen
-%		- Ketten bei bRules und cRules bedenken
+%	NB: - LINK(X,Y)-Checkl einfügen
+%		- nachdenken, ob SMC check nicht bei merge 3 sein sollte
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lc1([bRule(S,::,[=F|FsS],BChain)|Ws],InTree,OutWs,OutTree):- append(S,T,ST),checkFsRule(ST,:,FsS,BChain,ARule),
-														OutWs = [pre(cRule(T,_Dot,[F],CChain),ARule)|Ws],% merge 1
-														buildTree(lcMerge1,InTree,OutTree).
-lc1([bRule(S,:,[=F|FsS],BChain)|Ws],InTree,OutWs,OutTree):-  	append(T,S,TS),checkFsRule(TS,:,FsS,BChain,ARule),
-														OutWs = [pre(cRule(T,_Dot,[F],_CChain),ARule)|Ws],% merge 2
-														buildTree(lcMerge2,InTree,OutTree).
-lc1([bRule(S,:,[=F|FsS],BChain)|Ws],InTree,OutWs,OutTree):- append(BChain,chainL(T,[F|FsT]),NewChain), checkFsRule(S,:,FsS,NewChain,ARule),
-														OutWs = [pre(cRule(T,_Dot,[F|FsT],_CChain),ARule)|Ws], % merge 3
-														buildTree(lcMerge3,InTree,OutTree).
-lc1([bRule(S,:,[+F|FsS],BChain)|Ws],InTree,OutWs,OutTree):- checkSMC(BChain),checkMove(bRule(S,:,[+F|FsS],BChain),BChain,ARule), % move 1 + 2
-														OutWs = [ARule|Ws],
-														buildTree(lcMove,InTree,OutTree).
+lc1([bR(S,::,[=F|FsS],(LB,_),BChain)|Ws],InTree,OutWs,OutTree):- 
+	append(S,T,ST),checkFsRule(ST,:,FsS,(LB,RC),BChain,ARule),
+	OutWs = [pre(cR(T,_Dot,[F],(_LC,RC),_CChain),ARule)|Ws],% merge 1
+	buildTree(lcMerge1,InTree,OutTree).
+lc1([bR(S,:,[=F|FsS],(_,RB),BChain)|Ws],InTree,OutWs,OutTree):-  	% do/can we ever use this case?
+	append(T,S,TS),checkFsRule(TS,:,FsS,(LC,RB),BChain,ARule),
+	OutWs = [pre(cR(T,_Dot,[F],(LC,_RC),_CChain),ARule)|Ws],% merge 2
+	buildTree(lcMerge2,InTree,OutTree).
+lc1([bR(S,:,[=F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):- 
+	append(BChain,chainL(T,[F|FsT],PosC),NewChain), checkFsRule(S,:,FsS,PosB,NewChain,ARule),
+	OutWs = [pre(cR(T,_Dot,[F|FsT],PosC,_CChain),ARule)|Ws], % merge 3
+	buildTree(lcMerge3,InTree,OutTree).
+lc1([bR(S,:,[+F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):- 
+	checkSMC(BChain),checkMove(bR(S,:,[+F|FsS],PosB,BChain),BChain,ARule), % move 1 + 2
+	OutWs = [ARule|Ws],
+	buildTree(lcMove,InTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % lc2(+[WS],+[Tree],-[WS],-[Tree])
 %
 %		-lc2(R); R = MG-Rule
-%		=> given R = R1 and a C: replace C for B -> A
+%		=> given R = R1 and a C is in WS: replace C for B -> A
 %			R1:		- merge 2
 %					- merge 3	
-%		aRule is a placeholder
-%		because I do not know if the bRule becomes a cRule or bRule
-%	NB: - Link abfrage einbauen
-%		- Ketten bei bRules und cRules bedenken
+%		aR is a placeholder
+%		because I do not know if the bR becomes a cR or bR
+%	NB: - LINK(X,Y)-Checkl einfügen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lc2([cRule(T,_,[ F],CChain)|Ws],InTree,OutWs,OutTree):- append(T,S,TS),append(_BChain,CChain,AChain),
-														OutWs = [pre(bRule(S,_Dot,[=F|FsS],_BChain),aRule(TS,:,FsS,AChain))|Ws], 	% merge 2, because I do not know if the bRule becomes a cRule or bRule, aRule is a placeholder
-														buildTree(lcMerge2,InTree,OutTree).
-lc2([cRule(T,_,[ F|FsT],CChain)|Ws],InTree,OutWs,OutTree):- append(_BChain,[chainL(T,FsT)|CChain],AChain), OutWs = [pre(bRule(S,_Dot,[=F|FsS],_BChain),aRule(S,:,FsS,AChain))|Ws],	% merge 3, because I do not know if the bRule becomes a cRule or bRule, aRule is a placeholder
-														buildTree(lcMerge3,InTree,OutTree).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%														
-% checkMove(+bRule,+[chainLinks],-Rule)
+lc2([cR(T,_,[ F],(LC,_),CChain)|Ws],InTree,OutWs,OutTree):- append(T,S,TS),append(BChain,CChain,AChain),
+	OutWs = [pre(bR(S,_Dot,(_LB,RB),[=F|FsS],BChain),aR(TS,:,FsS,(LC,RB),AChain))|Ws], 	% merge 2, because I do not know if the bR becomes a cR or bR, aR is a placeholder
+	buildTree(lcMerge2,InTree,OutTree).
+lc2([cR(T,_,[ F|FsT],PocC,CChain)|Ws],InTree,OutWs,OutTree):- 
+	append(BChain,[chainL(T,FsT,PocC)|CChain],AChain), OutWs = [pre(bR(S,_Dot,PosB,[=F|FsS],BChain),aR(S,:,FsS,PosB,AChain))|Ws],	% merge 3, because I do not know if the bR becomes a cR or bR, aR is a placeholder
+	buildTree(lcMerge3,InTree,OutTree).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% checkMove(+bR,+[chainLinks],-Rule)
 %
 % checks if any Moves can be done (legally)  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkMove(_,[],_):-!,false. % nothing (legal) found
-checkMove(bRule(S,:,[+F|FsS],_),[chainL(T,[-F])|Rules],ARule):-	append(T,S,TS),checkFsRule(TS,:,FsS,Rules,ARule).
-checkMove(bRule(S,:,[+F|FsS],_),[chainL(T,[-F|FsT])|Rules],ARule):-checkFsRule(S,:,FsS,[chainL(T,FsT)|Rules],ARule).
-checkMove(BRule,[CRule|Rules],ARule):-	checkMove(BRule,Rules,NewRule),addChain(NewRule,CRule,ARule).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%														
+checkMove(bR(S,:,[+F|FsS],(_,RB),_),[chainL(T,[-F],(LC,_))|Rules],ARule):-	
+	append(T,S,TS),checkFsRule(TS,:,FsS,(LC,RB),Rules,ARule). % move 1
+checkMove(bR(S,:,[+F|FsS],PosB,_),[chainL(T,[-F|FsT],PosC)|Rules],ARule):-
+	checkFsRule(S,:,FsS,PosB,[chainL(T,FsT,PosC)|Rules],ARule). % move 2
+checkMove(BRule,[CRule|Rules],ARule):-	
+	checkMove(BRule,Rules,NewRule),addChain(NewRule,CRule,ARule).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkSMC(Rules)
 %
 % checks if the SMC is violated 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-checkSMC([chainL(_,[-F|_]),chainL(_,[-F|_])|_]):-!,false.
+checkSMC([chainL(_,[-F|_],_),chainL(_,[-F|_])|_],_):-!,false.
 checkSMC([CR1, CR2|Rules]) :- checkSMC([CR1|Rules]),checkSMC([CR2|Rules]).
 checkSMC([_]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% checkFsRule(+[String],+Type,[Fs],-Rule)
+% checkFsRule(+[String],+Type,[Fs],+Pos,+Chain,-Rule)
 %
 % checks which rule applies to the Fs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-checkFsRule(W,T,[=F|Fs],Chain,bRule(W,T,[=F|Fs],Chain)).
-checkFsRule(W,T,[+F|Fs],Chain,bRule(W,T,[+F|Fs],Chain)).
-checkFsRule(W,T,[-F|Fs],Chain,cRule(W,T,[-F|Fs],Chain)).
-checkFsRule(W,T,[ F|Fs],Chain,ARule):- checkCat(F),ARule = cRule(W,T,[ F|Fs],Chain).
+checkFsRule(W,T,[=F|Fs],Pos,Chain,bR(W,T,[=F|Fs],Pos,Chain)).
+checkFsRule(W,T,[+F|Fs],Pos,Chain,bR(W,T,[+F|Fs],Pos,Chain)).
+checkFsRule(W,T,[-F|Fs],Pos,Chain,cR(W,T,[-F|Fs],Pos,Chain)).
+checkFsRule(W,T,[ F|Fs],Pos,Chain,ARule):- checkCat(F),ARule = cR(W,T,[ F|Fs],Pos,Chain).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % addChain(+Rule,+ChainLink,-Rule)
 %
 % adds a chain link to a rule at the start
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-addChain(bRule(W,Dot,Fs,Chain),ChainL,bRule(W,Dot,Fs,[ChainL|Chain])).
-addChain(cRule(W,Dot,Fs,Chain),ChainL,cRule(W,Dot,Fs,[ChainL|Chain])).
-addChain(aRule(W,Dot,Fs,Chain),ChainL,aRule(W,Dot,Fs,[ChainL|Chain])).
+addChain(bR(W,Dot,Fs,Pos,Chain),ChainL,bR(W,Dot,Fs,Pos,[ChainL|Chain])).
+addChain(cR(W,Dot,Fs,Pos,Chain),ChainL,cR(W,Dot,Fs,Pos,[ChainL|Chain])).
+addChain(aR(W,Dot,Fs,Pos,Chain),ChainL,aR(W,Dot,Fs,Pos,[ChainL|Chain])).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Closure-Rules
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% checkCNRule(+LCRule,+[Ws],+LCTree,+[Tree],-[Ws],-[Tree])
+% checkCN(+LCRule,+[LCRule],+LCTree,+[Tree],-[LCRule],-[Tree])
 %
-%	check if a CN-Rule can be applied, commit to the chosen checkCNRule
-%	NB: nachprüfen, ob ! bei ALLEN Regeln nötig ist
-%		- umschreiben. Ws wichtiger als gedacht
+%	check if a CN-Rule can be applied, commit to the chosen checkCN
+%	LCRule: either a bR,cR,pre(bR,bR),pre(bR,cR),pre(bR,aR),pre(cR,bR),pre(cR,cR),pre(cR,aR)
+%	NB: LINK(X,Y)-Checkl einfügen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-checkCNRule(_,[],_,_,_,_):- !,false.
-checkCNRule(LCRule,[WSItem|RestWS],LCTree,[Tree|RestTree],OutWs,OutTree)
+checkCN(_,[],_,_,_,_):- !,false.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% c0-Rules check
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkCN(bR(W,T,F,(L,R),Ch),[pre(bR(WWs,T,F,(L,R),CWs),ARule)|WSs],LCTree,[DerTree|Trees],[OutRule|WSs],[OutTree|Trees]):- 
+	c0(bR(W,T,F,(L,R),Ch),pre(bR(WWs,T,F,(L,R),CWs),ARule),LCTree,DerTree,OutRule,OutTree).
+checkCN(cR(W,T,F,(L,R),Ch),[pre(bR(WWs,T,F,(L,R),CWs),ARule)|WSs],LCTree,[DerTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c0(cR(W,T,F,(L,R),Ch),pre(cR(WWs,T,F,(L,R),CWs),ARule),LCTree,DerTree,OutRule,OutTree).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% c1-Rules check
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkCN(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,aR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):-
+	c1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,DeepC1Rule,DeepC1Tree),
+	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC1Rule|WSs],
+	OutTree = [DeepC1Tree|Trees]).
+checkCN(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):-
+	c1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,DeepC1Rule,DeepC1Tree),
+	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC1Rule|WSs],
+	OutTree = [DeepC1Tree|Trees]).
+checkCN(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,aR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LCTree,[Tree|Trees],OutWs,OutTree):-
+	c1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LCTree,Tree,DeepC1Rule,DeepC1Tree),
+	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC1Rule|WSs],
+	OutTree = [DeepC1Tree|Trees]).
+checkCN(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):-
+	c1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,DeepC1Rule,DeepC1Tree),
+	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC1Rule|WSs],
+	OutTree = [DeepC1Tree|Trees]).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% c2-Rules check
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkCN(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):-
+	c2(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC2Rule|WSs],
+	OutTree = [DeepC2Tree|Trees]).
+checkCN(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):-
+	c2(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC2Rule|WSs],
+	OutTree = [DeepC2Tree|Trees]).
+checkCN(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):-
+	c2(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC2Rule|WSs],
+	OutTree = [DeepC2Tree|Trees]).
+checkCN(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):-
+	c2(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree);
+	OutWs = [DeepC2Rule|WSs],
+	OutTree = [DeepC2Tree|Trees]).
 
+checkCN(LCRule,[WSItem|WSs],LCTree,[Tree|Trees],[DeepItem,WSItem|WSRest],[DeepTree,Tree|Forest]):-
+	checkCN(LCRule,WSs,LCTree,[Tree|Trees],[DeepItem|WSRest],[DeepTree|Forest]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% c0(+[Ws],-[Ws])
+%	c0(+LCRule,+Pre(B,A),+Tree,+Tree,-LCRule,-Tree)
 %
-%	given pre(B,A) in Workspace and LC-Rule, which produces B (lc1(move1),lc1(move2),shift)
-%	=> delete pre(B,A) and return A (cRule,bRule,aRule)
-%	NB: nachdenken, ob aRule üverhaupt vorkommen kann hier
+%	applies c0-Rule
+%	so: c0(move 1+2) and c0(shift)
+%	inherent unification of Prolog should fill in the Variables,
+%	otherwise I have to do the unification explicitly
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-c0(InWs,OutWs).
+c0(BRule,pre(BRule,ARule),LcTree,WsTree,ARule,OutTree):-
+	buildC0Tree(LcTree,WsTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% c1(+[Ws],-[Ws])
+%	c1(+Pre(B,A),+Pre(C,B),+Tree,+Tree,-Pre(C,A),-Tree)
 %
-% 	given pre(C,B) in Workspace and LC-Rule, which produces pre(B,A)
-%	=> delete pre(C,B) and return pre(C,A)
+%	applies c1-Rule
+%	inherent unification of Prolog should fill in the Variables,
+%	otherwise I have to do the unification explicitly
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-c1(InWs,OutWs).
+c1(pre(BRule,ARule),pre(CRule,BRule,CWs)),LcTree,WsTree,DeepC1Rule,DeepC1Tree):-
+	DeepC1Rule = pre(CRule,ARule),
+	buildCTree(LcTree,WsTree,DeepC1Tree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% c2(+[Ws],-[Ws])
+%	c2(+Pre(C,B),+Pre(B,A),+Tree,+Tree,-Pre(C,A),-Tree)
 %
-%	given pre(B,A) in Workspace and LC-Rule, which produces pre(C,B)
-%	=> delte pre(B,A) and return pre(C,A)
+%	applies c2-Rule
+%	inherent unification of Prolog should fill in the Variables,
+%	otherwise I have to do the unification explicitly
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-c2(InWs,OutWs).
+c2(pre(CRule,BRule),pre(BRule,ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree):-
+	DeepC2Rule = pre(CRule,ARule),
+	buildCTree(WsTree,LcTree,DeepC2Tree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% c3(+[Ws],-[Ws])
+% checkC1(ARule,WSs,LCTree,Trees,DeepC3Rule,DeepC3Tree)
 %
-%	given pre(B,A) and pre(D,C) in Workspace and LC-Rule, 
-%	which produces pre(C,B)
-%	=> delete pre(B,A) and pre(D,C) and return pre(D,A)
+% checks if another Item in the WS fits a c1 for a potential c3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-c3(InWs,OutWs).
+checkC1(_,[],_,_,_,_):- !,false.
+checkC1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,aR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,OutRule,OutTree).
+checkC1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,OutRule,OutTree).
+checkC1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,aR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LCTree,[Tree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LCTree,Tree,OutRule,OutTree).
+checkC1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,OutRule,OutTree).
+checkC1(LCRule,[WSItem|WSs],LcTree,[WsTree|Trees],[DeepItem,WSItem|WSRest],[DeepTree,WsTree|Forest]):-
+	checkC1(LCRule,WSs,LcTree,[WsTree|Trees],[DeepItem|WSRest],[DeepTree|Forest]).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% checkC2(ARule,WSs,LCTree,Trees,DeepC3Rule,DeepC3Tree)
+%
+% checks if another Item in the WS fits a c2 for a potential c3
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkC2(_,[],_,_,_,_):- !,false.
+checkC2(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c2(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,OutRule,OutTree).
+checkC2(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c2(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,OutRule,OutTree).
+checkC2(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c2(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,OutRule,OutTree).
+checkC2(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],[OutRule|WSs],[OutTree|Trees]):-
+	c2(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,OutRule,OutTree).
+checkC2(LCRule,[WSItem|WSs],LcTree,[WsTree|Trees],[DeepItem,WSItem|WSRest],[DeepTree,WsTree|Forest]):-
+	checkC2(LCRule,WSs,LcTree,[WsTree|Trees],[DeepItem|WSRest],[DeepTree|Forest]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Building the derivation Tree
@@ -300,3 +397,15 @@ checkTreeMove((S,[+F|FsS]),[(T,[-F|FsT])|RsChain],NewChain):- % move 2
 	NewChain = [(S,FsS),(T,FsT)|RsChain].
 checkTreeMove(FChain,[KChain|RsChain],NewChain):- checkTreeMove(FChain,RsChain,[NewFChain|NewRsChain]),
 	NewChain = [NewFChain,KChain|NewRsChain].
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% buildCTree(+Tree,+Tree,-Tree)
+%
+% builds a tree out of two trees that came from a prediction each
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+buildCTree(LcTree,WsTree,DeepC1Tree)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% buildC0Tree(+Tree,+Tree,-Tree)
+%
+% builds a tree out of a trees that came from a prediction and a normal tree
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+buildC0Tree(LcTree,WsTree,OutTree).
