@@ -74,7 +74,7 @@ lcParse(Tokens,Tree):-
 parseF(_,[],[cR(W,::,[cfin],Pos,[])],[li(W,[cfin])],[],[cR(W,::,[cfin],Pos,[])],[li(W,[cfin])]). % special end condition for Tree = 1 leaf
 parseF(_,[],[cR(W,:,[cfin],Pos,[])],Tree,[],[cR(W,:,[cfin],Pos,[])],Tree). % normal end condition
 parseF(Pos,Input,[],[],OutPut,OutWs,OutTree):- 	
-	(debugMode->write("parseF: current Input: "),writeln(Input);true),
+	(debugMode->writeln(" "),write("parseF: current Input: "),writeln(Input);true),
 	(debugMode->write("parseF: current Ws: "),writeln([]);true),
 	(debugMode->write("parseF: current Tree: "),writeln([]);true),
 	shift(Pos,Input,NewPos,RestPut,LI),	% First Action of the Parse
@@ -83,23 +83,25 @@ parseF(Pos,Input,[],[],OutPut,OutWs,OutTree):-
 	(debugMode->write("parseF: new Tree: "),writeln([LI]);true),
 	parseF(NewPos,RestPut,[WsRule],[LI],OutPut,OutWs,OutTree).
 parseF(Pos,Input,[bR(W,T,Fs,PosB,Chain)|Ws],InTree,OutPut,OutWs,OutTree):-  
-	(debugMode->write("parseF: current Input: "),writeln(Input);true),
+	(debugMode->writeln(" "),write("parseF: current Input: "),writeln(Input);true),
 	(debugMode->write("parseF: current Ws: "),writeln([bR(W,T,Fs,PosB,Chain)|Ws]);true),
 	(debugMode->write("parseF: current Tree: "),writeln(InTree);true),
 	lc1([bR(W,T,Fs,PosB,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 1
 	(checkCN(LCRule,InterWs,LCTree,InterTree,CNWs,CNTree), % check if something clicks with WS
 	parseF(Pos,Input,CNWs,CNTree,OutPut,OutWs,OutTree);
+	(debugMode->writeln("parseF: no cN-Rule ");true),
 	parseF(Pos,Input,[LCRule|InterWs],[LCTree|InterTree],OutPut,OutWs,OutTree)).
 parseF(Pos,Input,[cR(W,T,Fs,PosC,Chain)|Ws],InTree,OutPut,OutWs,OutTree):-  
-	(debugMode->write("parseF: current Input: "),writeln(Input);true),
+	(debugMode->writeln(" "),write("parseF: current Input: "),writeln(Input);true),
 	(debugMode->write("parseF: current Ws: "),writeln([cR(W,T,Fs,PosC,Chain)|Ws]);true),
 	(debugMode->write("parseF: current Tree: "),writeln(InTree);true),
 	lc2([cR(W,T,Fs,PosC,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 2
 	(checkCN(LCRule,InterWs,LCTree,InterTree,CNWs,CNTree), % check if something clicks with WS
 	parseF(Pos,Input,CNWs,CNTree,OutPut,OutWs,OutTree);
+	(debugMode->writeln("parseF: no cN-Rule ");true),
 	parseF(Pos,Input,[LCRule|InterWs],[LCTree|InterTree],OutPut,OutWs,OutTree)).
 parseF(Pos,Input,Ws,InTree,OutPut,OutWs,OutTree):-  
-	(debugMode->write("parseF: current Input: "),writeln(Input);true),
+	(debugMode->writeln(" "),write("parseF: current Input: "),writeln(Input);true),
 	(debugMode->write("parseF: current Ws: "),writeln(Ws);true),
 	(debugMode->write("parseF: current Tree: "),writeln(InTree);true),
 	shift(Pos,Input,NewPos,RestPut,LI),	% Last to try shift
@@ -107,6 +109,7 @@ parseF(Pos,Input,Ws,InTree,OutPut,OutWs,OutTree):-
 	(debugMode->write("parseF: new Ws-Rule: "),writeln(WsRule);true),
 	(checkCN(WsRule,Ws,LI,InTree,CNWs,CNTree), % check if something clicks with WS
 	parseF(NewPos,RestPut,CNWs,CNTree,OutPut,OutWs,OutTree);
+	(debugMode->writeln("parseF: no cN-Rule ");true),
 	parseF(NewPos,RestPut,[WsRule|Ws],[LI|InTree],OutPut,OutWs,OutTree)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,11 +173,11 @@ checkCat(_).
 %	NB: - LINK(X,Y)-Checkl einfügen
 %		- nachdenken, ob SMC check nicht bei merge 3 sein sollte
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lc1([bR(S,::,[=F|FsS],(LB,_),BChain)|Ws],InTree,OutWs,OutTree):- 
+lc1([bR(S,::,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->writeln("lc1: merge1");true),
 	%checkLink(pre(cR(T,Dot,[F],(LC,RC),CChain),ARule)),
 	append(S,T,ST),checkFsRule(ST,:,FsS,(LB,RC),BChain,ARule),
-	OutWs = [pre(cR(T,_Dot,[F],(_LC,RC),_CChain),ARule)|Ws],% merge 1
+	OutWs = [pre(cR(T,_Dot,[F],(RB,RC),_CChain),ARule)|Ws],% merge 1
 	(debugMode->write("lc1: new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge1,InTree,OutTree),
 	(debugMode->write("lc1: new Tree: "),writeln(OutTree);true).
@@ -212,19 +215,19 @@ lc1([bR(S,:,[+F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):-
 %		because I do not know if the bR becomes a cR or bR
 %	NB: - LINK(X,Y)-Checkl einfügen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lc2([cR(T,_,[ F],(LC,_),CChain)|Ws],InTree,OutWs,OutTree):- append(T,S,TS),append(BChain,CChain,AChain),
+lc2([cR(T,_,[ F],(LC,RC),CChain)|Ws],InTree,OutWs,OutTree):- append(T,S,TS),append(BChain,CChain,AChain),
 	(debugMode->writeln("lc2: merge2");true),
 	%checkLink(pre(bR(S,:,(LB,RB),[=F|FsS],BChain),aR(TS,:,FsS,(LC,RB),AChain))),
-	OutWs = [pre(bR(S,:,(_LB,RB),[=F|FsS],BChain),aR(TS,:,FsS,(LC,RB),AChain))|Ws], 	% merge 2, because I do not know if the bR becomes a cR or bR, aR is a placeholder
+	OutWs = [pre(bR(S,:,[=F|FsS],(RC,RB),BChain),aR(TS,:,FsS,(LC,RB),AChain))|Ws], 	% merge 2, because I do not know if the bR becomes a cR or bR, aR is a placeholder
 	(debugMode->write("lc2: new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge2,InTree,OutTree),
 	(debugMode->write("lc2: new Tree: "),writeln(OutTree);true).
 lc2([cR(T,TT,[ F|FsT],PosC,CChain)|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->writeln("lc2: merge3");true),
-	checkLink(pre(bR(S,Dot,PosB,[=F|FsS],BChain),aR(S,:,FsS,PosB,AChain))),	% check if link exist
-	checkLink(pre(bR(S,Dot,PosB,[=F|FsS],BChain),aR(T,TT,FsT,PosC,CChain))),% check with dummy aR for new chain element
+	checkLink(pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(S,:,FsS,PosB,AChain))),	% check if link exist
+	checkLink(pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(T,TT,FsT,PosC,CChain))),% check with dummy aR for new chain element
 	append(BChain,[chainL(T,FsT,PosC)|CChain],AChain),
-	OutWs = [pre(bR(S,Dot,PosB,[=F|FsS],BChain),aR(S,:,FsS,PosB,AChain))|Ws],	% merge 3, because I do not know if the bR becomes a cR or bR, aR is a placeholder
+	OutWs = [pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(S,:,FsS,PosB,AChain))|Ws],	% merge 3, because I do not know if the bR becomes a cR or bR, aR is a placeholder
 	(debugMode->write("lc2: new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge3,InTree,OutTree),
 	(debugMode->write("lc2: new Tree: "),writeln(OutTree);true).
@@ -361,6 +364,10 @@ checkCN(LCRule,[WSItem|WSs],LCTree,[Tree|Trees],[DeepItem,WSItem|WSRest],[DeepTr
 %	inherent unification of Prolog should fill in the Variables,
 %	otherwise I have to do the unification explicitly
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+c0(BRule,pre(BRule,aR(WWs,T,[=F|FsWs],(L,R),CWs)),LcTree,WsTree,bR(WWs,T,[=F|FsWs],(L,R),CWs),OutTree):-
+	buildCTree(WsTree,LcTree,OutTree).
+c0(BRule,pre(BRule,aR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|FsWs],(L,R),CWs),OutTree):-
+	buildCTree(WsTree,LcTree,OutTree).
 c0(BRule,pre(BRule,ARule),LcTree,WsTree,ARule,OutTree):-
 	buildCTree(WsTree,LcTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -382,6 +389,7 @@ c1(pre(BRule,ARule),pre(CRule,BRule),LcTree,WsTree,DeepC1Rule,DeepC1Tree):-
 %	otherwise I have to do the unification explicitly
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c2(pre(CRule,BRule),pre(BRule,ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree):-
+	(debugMode -> writeln("c2: ckeck Link");true),
 	checkLink(pre(CRule,ARule)),
 	DeepC2Rule = pre(CRule,ARule),
 	buildCTree(WsTree,LcTree,DeepC2Tree).
@@ -422,22 +430,22 @@ checkC2(LCRule,[WSItem|WSs],LcTree,[WsTree|Trees],[DeepItem,WSItem|WSRest],[Deep
 %
 % checks if a link exists for the prediction 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-checkLink(pre(cR(_,T,FsC,_),cR(_,_,FsA,_))):- 
+checkLink(pre(cR(_,T,FsC,_,_),cR(_,_,FsA,_,_))):- 
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(cR(_,T,FsC,_),aR(_,_,FsA,_))):- 
+checkLink(pre(cR(_,T,FsC,_,_),aR(_,_,FsA,_,_))):- 
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(cR(_,T,FsC,_),bR(_,_,FsA,_))):- 
+checkLink(pre(cR(_,T,FsC,_,_),bR(_,_,FsA,_,_))):- 
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(bR(_,T,FsC,_),cR(_,_,FsA,_))):- 
+checkLink(pre(bR(_,T,FsC,_,_),cR(_,_,FsA,_,_))):- 
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(bR(_,T,FsC,_),aR(_,_,FsA,_))):- 
+checkLink(pre(bR(_,T,FsC,_,_),aR(_,_,FsA,_,_))):- 
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(bR(_,T,FsC,_),bR(_,_,FsA,_))):- 
+checkLink(pre(bR(_,T,FsC,_,_),bR(_,_,FsA,_,_))):- 
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
