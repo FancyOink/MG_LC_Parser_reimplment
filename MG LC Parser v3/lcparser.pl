@@ -366,7 +366,15 @@ checkCN(LCRule,[WSItem|WSs],LCTree,[Tree|Trees],[DeepItem,WSItem|WSRest],[DeepTr
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c0(BRule,pre(BRule,aR(WWs,T,[=F|FsWs],(L,R),CWs)),LcTree,WsTree,bR(WWs,T,[=F|FsWs],(L,R),CWs),OutTree):-
 	buildCTree(WsTree,LcTree,OutTree).
+c0(BRule,pre(BRule,aR(WWs,T,[+F|FsWs],(L,R),CWs)),LcTree,WsTree,bR(WWs,T,[+F|FsWs],(L,R),CWs),OutTree):-
+	buildCTree(WsTree,LcTree,OutTree).
+c0(BRule,pre(BRule,bR(WWs,T,[=F|FsWs],(L,R),CWs)),LcTree,WsTree,bR(WWs,T,[=F|FsWs],(L,R),CWs),OutTree):-
+	buildCTree(WsTree,LcTree,OutTree).
+c0(BRule,pre(BRule,bR(WWs,T,[+F|FsWs],(L,R),CWs)),LcTree,WsTree,bR(WWs,T,[+F|FsWs],(L,R),CWs),OutTree):-
+	buildCTree(WsTree,LcTree,OutTree).
 c0(BRule,pre(BRule,aR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|FsWs],(L,R),CWs),OutTree):-
+	buildCTree(WsTree,LcTree,OutTree).
+c0(BRule,pre(BRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|FsWs],(L,R),CWs),OutTree):-
 	buildCTree(WsTree,LcTree,OutTree).
 c0(BRule,pre(BRule,ARule),LcTree,WsTree,ARule,OutTree):-
 	buildCTree(WsTree,LcTree,OutTree).
