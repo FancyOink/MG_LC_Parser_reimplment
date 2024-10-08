@@ -24,15 +24,25 @@ rememberLink([Link|Links]):- assertz(Link),rememberLink(Links).
 % generates LINKS from given (transformed) MG-lexicon
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 :- linking(T),rememberLink(T).
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% getLinks(-[Links(X,Y)])
+%
+% returns all links
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+getLinks(L):- setof(link(T,X,Y),link(T,X,Y),L),
+	(mainDebug->writeln(L);true).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Hauptfunktion des Parsers
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-parse(Input,Lambda,Tree):- 
+parse(Input,Tree):- 
 			scanInput(Input,TokenList),
-			lcParse(TokenList,Tree),
-			makeLambda(Tree,Lambda). % TODO: Hier später Tree -> MGTree
+			(mainDebug-> write("parse: Tokenliste: "),writeln(TokenList);true),
+			!, % Cut to prevent unneccessary backtracking to Scanner, if unsuccsessfull parse
+			lcParse(TokenList,Tree).
+			%makeLambda(Tree,Lambda). % TODO: Hier später Tree -> MGTree
+
+
 
 
 
