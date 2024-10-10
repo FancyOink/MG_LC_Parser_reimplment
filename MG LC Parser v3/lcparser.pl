@@ -6,8 +6,7 @@
 debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TODO: - buildC0Tree
-%		- checkLink
+% TODO: - Zusammenfügung von Ketten
 %		- epsilon-LI erlauben
 %		- protocol the parse-steps as an option/default
 % MG with Semantics
@@ -111,7 +110,9 @@ parseF(Pos,Input,Ws,InTree,OutPut,OutWs,OutTree):-
 	parseF(NewPos,RestPut,CNWs,CNTree,OutPut,OutWs,OutTree);
 	(debugMode->writeln("parseF: no cN-Rule ");true),
 	parseF(NewPos,RestPut,[WsRule|Ws],[LI|InTree],OutPut,OutWs,OutTree)).
-
+/* parseF(_,_,_,_,_,_,_):-
+	(debugMode->writeln("parseF: not a valid branch ");true),
+	!,false. %final fail state for this parse iteration */
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % shift(+[Token],-[Token],-[LI])
 % 
@@ -175,7 +176,7 @@ checkCat(_).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc1([bR(S,::,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->writeln("lc1: merge1");true),
-	%checkLink(pre(cR(T,Dot,[F],(LC,RC),CChain),ARule)),
+	%checkLink(pre(cR(T,Dot,[F],(RB,RC),CChain),ARule)),
 	append(S,T,ST),checkFsRule(ST,:,FsS,(LB,RC),BChain,ARule),
 	OutWs = [pre(cR(T,_Dot,[F],(RB,RC),_CChain),ARule)|Ws],% merge 1
 	(debugMode->write("lc1: new WS: "),writeln(OutWs);true),
@@ -183,23 +184,24 @@ lc1([bR(S,::,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):-
 	(debugMode->write("lc1: new Tree: "),writeln(OutTree);true).
 lc1([bR(S,:,[=F|FsS],(_,RB),BChain)|Ws],InTree,OutWs,OutTree):-  	% do/can we ever use this case?
 	(debugMode->writeln("lc1: merge2");true),
-	%checkLink(pre(cR(T,Dot,[F],(LC,RC),CChain),ARule)),
+	checkLink(pre(cR(T,Dot,[F],(LC,RC),CChain),ARule)),
 	append(T,S,TS),checkFsRule(TS,:,FsS,(LC,RB),BChain,ARule),
-	OutWs = [pre(cR(T,_Dot,[F],(LC,_RC),_CChain),ARule)|Ws],% merge 2
+	OutWs = [pre(cR(T,Dot,[F],(LC,RC),CChain),ARule)|Ws],% merge 2
 	(debugMode->write("lc1: new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge2,InTree,OutTree),
 	(debugMode->write("lc1: new Tree: "),writeln(OutTree);true).
 lc1([bR(S,Dot,[=F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->writeln("lc1: merge3");true),
 	checkLink(pre(cR(T,Dot,[F|FsT],PosC,CChain),ARule)),	% check if link exist
-	append(BChain,chainL(T,[F|FsT],PosC),NewChain), checkFsRule(S,:,FsS,PosB,NewChain,ARule),
+	appendExtensibleLists(BChain,chainL(T,[F|FsT],PosC),NewChain), checkFsRule(S,:,FsS,PosB,NewChain,ARule),
 	OutWs = [pre(cR(T,Dot,[F|FsT],PosC,CChain),ARule)|Ws], % merge 3
 	(debugMode->write("lc1: new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge3,InTree,OutTree),
 	(debugMode->write("lc1: new Tree: "),writeln(OutTree);true).
 lc1([bR(S,:,[+F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):- 
-	(debugMode->writeln("lc1: move");true),
-	checkSMC(BChain),checkMove(bR(S,:,[+F|FsS],PosB,BChain),BChain,ARule), % move 1 + 2
+	(debugMode->write("lc1: move");true),
+	checkSMC(BChain),
+	checkMove(bR(S,:,[+F|FsS],PosB,BChain),BChain,ARule), % move 1 + 2
 	OutWs = [ARule|Ws],
 	(debugMode->write("lc1: new WS: "),writeln(OutWs);true),
 	buildTree(lcMove,InTree,OutTree),
@@ -215,9 +217,9 @@ lc1([bR(S,:,[+F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):-
 %		because I do not know if the bR becomes a cR or bR
 %	NB: - LINK(X,Y)-Checkl einfügen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lc2([cR(T,_,[ F],(LC,RC),CChain)|Ws],InTree,OutWs,OutTree):- append(T,S,TS),append(BChain,CChain,AChain),
+lc2([cR(T,_,[ F],(LC,RC),CChain)|Ws],InTree,OutWs,OutTree):- append(T,S,TS),appendExtensibleLists(BChain,CChain,AChain),
 	(debugMode->writeln("lc2: merge2");true),
-	%checkLink(pre(bR(S,:,(LB,RB),[=F|FsS],BChain),aR(TS,:,FsS,(LC,RB),AChain))),
+	checkLink(pre(bR(S,:,[=F|FsS],(RC,RB),BChain),aR(TS,:,FsS,(LC,RB),AChain))),
 	OutWs = [pre(bR(S,:,[=F|FsS],(RC,RB),BChain),aR(TS,:,FsS,(LC,RB),AChain))|Ws], 	% merge 2, because I do not know if the bR becomes a cR or bR, aR is a placeholder
 	(debugMode->write("lc2: new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge2,InTree,OutTree),
@@ -226,7 +228,7 @@ lc2([cR(T,TT,[ F|FsT],PosC,CChain)|Ws],InTree,OutWs,OutTree):-
 	(debugMode->writeln("lc2: merge3");true),
 	checkLink(pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(S,:,FsS,PosB,AChain))),	% check if link exist
 	checkLink(pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(T,TT,FsT,PosC,CChain))),% check with dummy aR for new chain element
-	append(BChain,[chainL(T,FsT,PosC)|CChain],AChain),
+	appendExtensibleLists(BChain,[chainL(T,FsT,PosC)|CChain],AChain),
 	OutWs = [pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(S,:,FsS,PosB,AChain))|Ws],	% merge 3, because I do not know if the bR becomes a cR or bR, aR is a placeholder
 	(debugMode->write("lc2: new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge3,InTree,OutTree),
@@ -236,13 +238,22 @@ lc2([cR(T,TT,[ F|FsT],PosC,CChain)|Ws],InTree,OutWs,OutTree):-
 %
 % checks if any Moves can be done (legally)  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-checkMove(_,[],_):-!,false. % nothing (legal) found
-checkMove(bR(S,:,[+F|FsS],(_,RB),_),[chainL(T,[-F],(LC,_))|Rules],ARule):-	
+checkMove(_,[],_):-
+	(debugMode -> writeln("checkMove: nothing legal found");true),
+	!,false. % nothing (legal) found
+checkMove(bR(_,:,[+_|_],_,_),[chainL(_,[],_)|_],_):-
+	(debugMode -> writeln("checkMove: nothing legal found");true),
+	!,false. % nothing (legal) found
+checkMove(bR(S,:,[+F|FsS],(_,RB),_),[chainL(T,[-F],(LC,_))|Rules],ARule):-
+	(debugMode -> writeln("1");true),
+	%checkLink(pre(cR(T,:,[-F],(LC,RC),_Dummy),aR(TS,:,FsS,(LB,RB),AChain))),
 	append(T,S,TS),checkFsRule(TS,:,FsS,(LC,RB),Rules,ARule). % move 1
-checkMove(bR(S,:,[+F|FsS],PosB,_),[chainL(T,[-F|FsT],PosC)|Rules],ARule):-
+checkMove(bR(S,:,[+F|FsS],PosB,AChain),[chainL(T,[-F|FsT],PosC)|Rules],ARule):-
+	(debugMode -> writeln("2");true),
+	checkLink(pre(cR(T,:,[-F|FsT],PosC,_Dummy),aR(S,:,FsS,PosB,AChain))),
 	checkFsRule(S,:,FsS,PosB,[chainL(T,FsT,PosC)|Rules],ARule). % move 2
 checkMove(BRule,[CRule|Rules],ARule):-	
-	checkMove(BRule,Rules,NewRule),addChain(NewRule,CRule,ARule).
+	checkMove(BRule,Rules,NewRule),appendExtensibleLists(NewRule,CRule,ARule).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkSMC(Rules)
 %
@@ -268,6 +279,60 @@ checkFsRule(W,T,[ F|Fs],Pos,Chain,ARule):- checkCat(F),ARule = cR(W,T,[ F|Fs],Po
 addChain(bR(W,Dot,Fs,Pos,Chain),ChainL,bR(W,Dot,Fs,Pos,[ChainL|Chain])).
 addChain(cR(W,Dot,Fs,Pos,Chain),ChainL,cR(W,Dot,Fs,Pos,[ChainL|Chain])).
 addChain(aR(W,Dot,Fs,Pos,Chain),ChainL,aR(W,Dot,Fs,Pos,[ChainL|Chain])).
+
+% First, given a possibly partially uninstantiated list like
+%      L = [A,b,[C|D]|E]
+% we define splitExtensibleList so that
+%      ?- splitExtensibleList(L,Prefix,Suffix)
+% returns something equivalent to the bindings
+%      Prefix = [A,b,[C|D]]
+%      Suffix = E
+% When L = [a|B]
+%      ?- splitExtensibleList(L,Prefix,Suffix)
+%      Prefix = [a]
+%      Suffix = B
+% When given a list that is not "extensible", that is, a list which does
+% not have a variable tail, we return the empty tail. When L = []
+%      ?- splitExtensibleList(L,Prefix,Suffix)
+%      Prefix = []
+%      Suffix = []
+% When L = [a,B]
+%      ?- splitExtensibleList(L,Prefix,Suffix)
+%      Prefix = [a,B]
+%      Suffix = []
+% In all cases, splitExtensibleList(L,P,S) implies append(P,S,L).
+splitExtensibleList(L,Prefix,Suffix) :- var(L), !, Prefix=[], Suffix=L.
+splitExtensibleList([H|T],[H|Prefix],Suffix) :- !, splitExtensibleList(T,Prefix,Suffix).
+splitExtensibleList([],[],[]).
+
+% Now given 2 extensible lists
+%      L0 = [A,b,[C|D]|E]
+%      L1 = [f,G,e(f)|H]
+% ?- appendExtensibleLists(L0,L1,L) returns something equivalent to the bindings
+%      L = [A,b,[C|D],f,G,e(f)|M]
+%      M = E = H
+% But if either list is extensible, the result is also extensible. So:
+% ?- appendExtensibleLists([],L1,L) returns something equivalent to the bindings
+%      L1 = L.
+% In effect, after evaluating appendExtensibleLists(L0,L1,L),
+% L0 and L1 share their extensible part, and so, intuitively,
+% no backtracking is needed to extend either L0 or L1.
+% Extending L0 is the same as extending L1.
+% Since we will only use this when appending Mover lists, we add a check to make
+% sure that the instantiated movers do not violate smc ...
+
+appendExtensibleLists(L0,L1,L) :-
+    splitExtensibleList(L0,Prefix0,Suffix0),
+    splitExtensibleList(L1,Prefix1,Suffix1),
+    % the prefixes are NOT extensible, so no backtrack point introduced by:
+    append(Prefix0,Prefix1,Prefix),
+    % and none of the following should not introduce a backtrack point either:
+    ( var(Suffix0), var(Suffix1) -> Suffix0=Suffix1, append(Prefix,Suffix1,L)
+    ; var(Suffix0) -> append(Prefix,Suffix1,L2), append(L2,Suffix0,L)
+    ; var(Suffix1) -> append(Prefix,Suffix0,L2), append(L2,Suffix1,L)
+    ; Suffix0=Suffix1, append(Prefix,Suffix1,L)
+    ).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Closure-Rules
@@ -438,22 +503,22 @@ checkC2(LCRule,[WSItem|WSs],LcTree,[WsTree|Trees],[DeepItem,WSItem|WSRest],[Deep
 %
 % checks if a link exists for the prediction 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-checkLink(pre(cR(_,T,FsC,_,_),cR(_,_,FsA,_,_))):- 
+checkLink(pre(cR(_,T,FsC,_,_),cR(_,_,FsA,_,_))):- !,
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(cR(_,T,FsC,_,_),aR(_,_,FsA,_,_))):- 
+checkLink(pre(cR(_,T,FsC,_,_),aR(_,_,FsA,_,_))):- !,
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(cR(_,T,FsC,_,_),bR(_,_,FsA,_,_))):- 
+checkLink(pre(cR(_,T,FsC,_,_),bR(_,_,FsA,_,_))):- !,
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(bR(_,T,FsC,_,_),cR(_,_,FsA,_,_))):- 
+checkLink(pre(bR(_,T,FsC,_,_),cR(_,_,FsA,_,_))):- !,
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(bR(_,T,FsC,_,_),aR(_,_,FsA,_,_))):- 
+checkLink(pre(bR(_,T,FsC,_,_),aR(_,_,FsA,_,_))):- !,
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
-checkLink(pre(bR(_,T,FsC,_,_),bR(_,_,FsA,_,_))):- 
+checkLink(pre(bR(_,T,FsC,_,_),bR(_,_,FsA,_,_))):- !,
 	(debugMode->write("checkLink: checking: link("),write(T),write(","),write(FsC),write(","),write(FsA),writeln(")");true),
 	\+ \+ link(T,FsC,FsA).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
