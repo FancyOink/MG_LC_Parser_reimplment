@@ -67,7 +67,8 @@ linking(NewLinks):-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 linkRule1(LinksR1):-
 		setof(('::',FsW),W^(W :: FsW),FsL1),list_to_ord_set(FsL1,L),
-		(debugMode -> write("List of unique Fs from LI: "), writeln(L);true),
+		(debugMode -> write("List of unique Fs from LI: "), writeln(L),
+					  write("Number of unique Fs from LI: "), length(L,LL),writeln(LL);true),
 		tryMergLinks(L,L,LinksR1).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -127,7 +128,8 @@ mergFunc(_,[],[]).
 mergFunc(FsB			,[(_ ,[])|FsR],Links)		:- mergFunc(FsB,FsR,Links).		
 mergFunc(('::',[ F]	   ),[(T2,[=F|Gamma]) |FsR],Links)	:- mergFunc(('::',[ F]),[(T2,Gamma)],DeeperAs),
 		mergFunc(('::',[F]),FsR,DeeperLinks),
-		ord_union(DeeperAs,DeeperLinks,Links).	% um es an Stanojevic anzugleichen, kein merge1 mit X = C. Muss trotzdem abgefangen werden, um Y=[] zu vermeiden
+		ord_union(DeeperAs,DeeperLinks,DLinks),
+		Links =	[link('::',[ F],Gamma)|DLinks].	% anders als bei Stanojevic anzugleichen mit merge1 und X = C 
 mergFunc(('::',[ F]   ),[(T2,[_,=F|Gamma]) |FsR],Links) :- mergFunc(('::',[ F]),[(T2,Gamma)],DeeperAs),
 		mergFunc(('::',[F]),FsR,DeeperLinks),
 		ord_union(DeeperAs,DeeperLinks,DLinks),
