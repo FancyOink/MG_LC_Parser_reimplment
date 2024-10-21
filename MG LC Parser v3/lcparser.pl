@@ -470,10 +470,10 @@ c0(BRule,pre(BRule,bR(WWs,T,[=F|FsWs],(L,R),CWs)),LcTree,WsTree,bR(WWs,T,[=F|FsW
 c0(BRule,pre(BRule,bR(WWs,T,[+F|FsWs],(L,R),CWs)),LcTree,WsTree,bR(WWs,T,[+F|FsWs],(L,R),CWs),OutTree):-
 	buildCTree(WsTree,LcTree,OutTree).
 c0(BRule,pre(BRule,aR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|FsWs],(L,R),CWs),OutTree):-
-	checkCat(F),
+	%checkCat(F),
 	buildCTree(WsTree,LcTree,OutTree).
 c0(BRule,pre(BRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|FsWs],(L,R),CWs),OutTree):-
-	checkCat(F),
+	%checkCat(F),
 	buildCTree(WsTree,LcTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %	c1(+Pre(B,A),+Pre(C,B),+Tree,+Tree,-Pre(C,A),-Tree)
@@ -485,7 +485,7 @@ c0(BRule,pre(BRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|FsW
 c1(pre(BRule,ARule),pre(CRule,BRule),LcTree,WsTree,DeepC1Rule,DeepC1Tree):-
 	DeepC1Rule = pre(CRule,ARule),
 	checkLink(pre(CRule,ARule)),
-	(debugMode->writeln("checkCN: Link found");true);
+	(debugMode->writeln("checkCN: Link found");true),
 	buildCTree(LcTree,WsTree,DeepC1Tree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %	c2(+Pre(C,B),+Pre(B,A),+Tree,+Tree,-Pre(C,A),-Tree)
@@ -497,7 +497,7 @@ c1(pre(BRule,ARule),pre(CRule,BRule),LcTree,WsTree,DeepC1Rule,DeepC1Tree):-
 c2(pre(CRule,BRule),pre(BRule,ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree):-
 	DeepC2Rule = pre(CRule,ARule),
 	checkLink(pre(CRule,ARule)),
-	(debugMode->writeln("checkCN: Link found");true);
+	(debugMode->writeln("checkCN: Link found");true),
 	buildCTree(WsTree,LcTree,DeepC2Tree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkC1(ARule,WSs,LCTree,Trees,DeepC3Rule,DeepC3Tree)
@@ -653,6 +653,9 @@ adjustRoot([(WB,F)|ChB],tree([(WC,[_|F]),ChC],_,_),NewHead):-
 	appendExtensibleLists(ChB,ChC,ChA),
 	NewHead = [(WA,F)|ChA].
 adjustRoot([(WB,F)|ChB],li(WC,[_|F]),NewHead):- 
+	insertExp(WB,WC,WA),
+	NewHead = [(WA,F)|ChB].
+adjustRoot([(WB,F)|ChB],li(WC,[_]),NewHead):- 
 	insertExp(WB,WC,WA),
 	NewHead = [(WA,F)|ChB].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
