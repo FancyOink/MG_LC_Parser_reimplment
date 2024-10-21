@@ -6,7 +6,7 @@
 debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TODO: - Zusammenfügung von Ketten
+% TODO: 
 %		- epsilon-LI erlauben
 %		- protocol the parse-steps as an option/default
 % MG with Semantics
@@ -181,7 +181,7 @@ checkCat(_).
 %		=> given R = R2 and a B: replace B for A
 %			R2:		- move 1
 %					- move 2
-%	NB: - LINK(X,Y)-Checkl einfügen
+%	NB:
 %		- nachdenken, ob SMC check nicht bei merge 3 sein sollte
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc1([bR(S,::,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 
@@ -378,6 +378,7 @@ checkCN(cR(W,T,F,(L,R),Ch),[pre(cR(WWs,T,F,(L,R),CWs),ARule)|WSs],LCTree,[DerTre
 checkCN(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,aR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c1");true),
 	c1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,DeepC1Rule,DeepC1Tree),
+	\+ var(DeepC1Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC1Rule);true),
 	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -386,6 +387,7 @@ checkCN(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,aR(WWs,T,[ F|FsWs],(L
 checkCN(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c1");true),
 	c1(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(BRule,bR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,DeepC1Rule,DeepC1Tree),
+	\+ var(DeepC1Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC1Rule);true),
 	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -394,6 +396,7 @@ checkCN(pre(bR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(BRule,bR(WWs,T,[ F|FsWs],(L
 checkCN(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,aR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LCTree,[Tree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c1");true),
 	c1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LCTree,Tree,DeepC1Rule,DeepC1Tree),
+	\+ var(DeepC1Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC1Rule);true),
 	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -402,6 +405,7 @@ checkCN(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,aR(WWs,T,[ F|FsWs],(L
 checkCN(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs))|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c1");true),
 	c1(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),pre(CRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,DeepC1Rule,DeepC1Tree),
+	\+ var(DeepC1Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC1Rule);true),
 	(checkC2(DeepC1Rule,WSs,DeepC1Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -413,6 +417,7 @@ checkCN(pre(cR(WN,T,[ F|FsN],(L,R),CNew),ARule),[pre(CRule,cR(WWs,T,[ F|FsWs],(L
 checkCN(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c2");true),
 	c2(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	\+ var(DeepC2Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC2Rule);true),
 	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -421,6 +426,7 @@ checkCN(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CW
 checkCN(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c2");true),
 	c2(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),pre(bR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	\+ var(DeepC2Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC2Rule);true),
 	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -429,6 +435,7 @@ checkCN(pre(CRule,bR(WN,T,[ F|FsN],(L,R),CNew)),[pre(bR(WWs,T,[ F|FsWs],(L,R),CW
 checkCN(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c2");true),
 	c2(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	\+ var(DeepC2Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC2Rule);true),
 	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -437,6 +444,7 @@ checkCN(pre(CRule,aR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R),CW
 checkCN(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule)|WSs],LcTree,[WsTree|Trees],OutWs,OutTree):- !,
 	(debugMode->writeln("checkCN: c2");true),
 	c2(pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),pre(cR(WWs,T,[ F|FsWs],(L,R),CWs),ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree),
+	\+ var(DeepC2Rule),
 	(debugMode->write("checkCN: new Pre: "),writeln(DeepC2Rule);true),
 	(checkC1(DeepC2Rule,WSs,DeepC2Tree,Trees,OutWs,OutTree),
 	(debugMode->writeln("checkCN: c3");true);
@@ -576,8 +584,13 @@ buildTree(lcMerge2,[tree([(T,[ F])|BetaChains],LeftTreeC2,LeftTreeC2)|Trees],Out
 buildTree(lcMerge3,[tree([(S,[=F|FsS]|AlphaChains)],LeftTreeB2,LeftTreeB2)|Trees],OutTrees):- 
 	FsS \= [],
 	OutTrees = [tree([(S,FsS),([gap],_FsT)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB2,LeftTreeB2),gapTree)|Trees]. % For Position B = DI
+buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):- % For Position B = LI with no other chain links
+	OutTrees = [tree([(S,FsS),([gap],_FsT)],li(S,[=F|FsS]),gapTree)|Trees]. 
 buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):- % For Position B = LI
 	OutTrees = [tree([(S,FsS),([gap],_FsT)|_NewChains],li(S,[=F|FsS]),gapTree)|Trees]. 
+buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI with no other chain links
+	checkCat(F),FsT \= [],
+	OutTrees = [tree([([gap],_FsS),(T,FsT)],gapTree,li(T,[ F|FsT]))|Trees]. 
 buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI
 	checkCat(F),FsT \= [],
 	OutTrees = [tree([([gap],_FsS),(T,FsT)|_NewChains],gapTree,li(T,[ F|FsT]))|Trees]. 
@@ -593,7 +606,7 @@ buildTree(lcMove,[tree([FChain|RsChain],LeftTreeB1,RightTreeB1)|Trees],OutTrees)
 % builds a tree out of two trees that came from a prediction each
 % the first tree gets the second tree inserted at its gapTree-position
 % finding the gapTree works like depth-first search
-% NB: nachdenken ob ein anderer Suchansatz besser wäre, z.B. breath-first
+% NB: nachdenken ob ein anderer Suchansatz besser wäre, z.B. breadth-first
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 buildCTree(tree(HeadB,gapTree,tree(HeadBR,LeftTreeBR,RightTreeBR)),TreeC,OutTree):-
 	adjustRoot(HeadB,TreeC,NewHead),
@@ -635,11 +648,11 @@ checkTreeMove(FChain,[KChain|RsChain],NewChain):- checkTreeMove(FChain,RsChain,[
 % incorporates the new insertion into the root of the (sub-)tree
 % NB: denk über Features nochmal nach
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-adjustRoot([(WB,F)|ChB],tree([(WC,_),ChC],_,_),NewHead):-
+adjustRoot([(WB,F)|ChB],tree([(WC,[_|F]),ChC],_,_),NewHead):-
 	insertExp(WB,WC,WA),
-	append(ChB,ChC,ChA),
+	appendExtensibleLists(ChB,ChC,ChA),
 	NewHead = [(WA,F)|ChA].
-adjustRoot([(WB,F)|ChB],li(WC,_),NewHead):- 
+adjustRoot([(WB,F)|ChB],li(WC,[_|F]),NewHead):- 
 	insertExp(WB,WC,WA),
 	NewHead = [(WA,F)|ChB].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
