@@ -185,10 +185,10 @@ checkCat(_).
 %	NB:
 %		- nachdenken, ob SMC check nicht bei merge 3 sein sollte
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lc1(It,[bR(S,::,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 
+lc1(It,[bR(S,::,[=F|FsS],(LB,RB),[])|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->write(It : " "),writeln("lc1: merge1");true),
 	%checkLink(pre(cR(T,Dot,[F],(RB,RC),CChain),ARule)),
-	append(S,T,ST),checkFsRule(ST,:,FsS,(LB,RC),BChain,ARule),
+	append(S,T,ST),checkFsRule(ST,:,FsS,(LB,RC),[],ARule),
 	OutWs = [pre(cR(T,_Dot,[F],(RB,RC),_CChain),ARule)|Ws],% merge 1
 	(debugMode->write(It : " "),write("lc1(me1): new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge1,InTree,OutTree),
@@ -196,7 +196,8 @@ lc1(It,[bR(S,::,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):-
 lc1(It,[bR(S,:,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 	% do/can we ever use this case?
 	(debugMode->write(It : " "),writeln("lc1: merge2");true),
 	checkLink(pre(cR(T,Dot,[F],(LC,LB),CChain),ARule)),
-	append(T,S,TS),checkFsRule(TS,:,FsS,(LC,RB),BChain,ARule),
+	appendExtensibleLists(BChain,CChain,AChain),
+	checkFsRule([T|S],:,FsS,(LC,RB),AChain,ARule),
 	OutWs = [pre(cR(T,Dot,[F],(LC,LB),CChain),ARule)|Ws],% merge 2
 	(debugMode->write(It : " "),write("lc1(me2): new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge2,InTree,OutTree),
@@ -658,6 +659,10 @@ checkTreeMove(FChain,[KChain|RsChain],NewChain):- checkTreeMove(FChain,RsChain,[
 % NB: denk über Features nochmal nach
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 adjustRoot([(WB,F)|ChB],tree([(WC,[_|F])|ChC],_,_),NewHead):-
+	insertExp(WB,WC,WA),
+	appendExtensibleLists(ChB,ChC,ChA),
+	NewHead = [(WA,F)|ChA].
+adjustRoot([(WB,F)|ChB],tree([(WC,[_])|ChC],_,_),NewHead):-
 	insertExp(WB,WC,WA),
 	appendExtensibleLists(ChB,ChC,ChA),
 	NewHead = [(WA,F)|ChA].
