@@ -193,11 +193,11 @@ lc1(It,[bR(S,::,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):-
 	(debugMode->write(It : " "),write("lc1(me1): new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge1,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc1(me1): new Tree: "),writeln(OutTree);true).
-lc1(It,[bR(S,:,[=F|FsS],(_,RB),BChain)|Ws],InTree,OutWs,OutTree):- 	% do/can we ever use this case?
+lc1(It,[bR(S,:,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 	% do/can we ever use this case?
 	(debugMode->write(It : " "),writeln("lc1: merge2");true),
-	checkLink(pre(cR(T,Dot,[F],(LC,RC),CChain),ARule)),
+	checkLink(pre(cR(T,Dot,[F],(LC,LB),CChain),ARule)),
 	append(T,S,TS),checkFsRule(TS,:,FsS,(LC,RB),BChain,ARule),
-	OutWs = [pre(cR(T,Dot,[F],(LC,RC),CChain),ARule)|Ws],% merge 2
+	OutWs = [pre(cR(T,Dot,[F],(LC,LB),CChain),ARule)|Ws],% merge 2
 	(debugMode->write(It : " "),write("lc1(me2): new WS: "),writeln(OutWs);true),
 	buildTree(lcMerge2,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc1(me2): new Tree: "),writeln(OutTree);true).
@@ -580,35 +580,35 @@ buildTree(lcMerge1,[li(S,[=F|FsS])|Trees],OutTrees):- % For position B = LI
 	FsS \= [],
 	append(S,[gap],SG),
 	OutTrees = [tree([(SG,FsS)|_NewChains],li(S,[=F|FsS]),gapTree)|Trees].	
-buildTree(lcMerge2,[tree([(S,[=F|FsS])|AlphaChains],LeftTreeB2,LeftTreeB2)|Trees],OutTrees):- % For position B = DI
-	OutTrees = [tree([([gap|S],FsS)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB2,LeftTreeB2),gapTree)|Trees]. 
+buildTree(lcMerge2,[tree([(S,[=F|FsS])|AlphaChains],LeftTreeB1,LeftTreeB2)|Trees],OutTrees):- % For position B = DI
+	OutTrees = [tree([([gap|S],FsS)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB1,LeftTreeB2),gapTree)|Trees]. 
 buildTree(lcMerge2,[li(T,[ F])|Trees],OutTrees):- % For position C = LI
 	checkCat(F),
 	append(T,[gap],TG),
 	OutTrees = [tree([(TG,_FsS)|_NewChains],gapTree,li(T,[ F]))|Trees].	
-buildTree(lcMerge2,[tree([(T,[ F])|BetaChains],LeftTreeC2,LeftTreeC2)|Trees],OutTrees):- % For position C = DI
+buildTree(lcMerge2,[tree([(T,[ F])|BetaChains],LeftTreeC1,LeftTreeC2)|Trees],OutTrees):- % For position C = DI
 	checkCat(F),
 	append(T,[gap],TG),
-	OutTrees = [tree([(TG,_FsS)|_NewChains],gapTree,tree([(T,[ F]|BetaChains)],LeftTreeC2,LeftTreeC2))|Trees]. 
-buildTree(lcMerge3,[tree([(S,[=F|FsS]|AlphaChains)],LeftTreeB2,LeftTreeB2)|Trees],OutTrees):- 
+	OutTrees = [tree([(TG,_FsS)|_NewChains],gapTree,tree([(T,[ F]|BetaChains)],LeftTreeC1,LeftTreeC2))|Trees]. 
+buildTree(lcMerge3,[tree([(S,[=F|FsS]|AlphaChains)],LeftTreeB1,LeftTreeB2)|Trees],OutTrees):- 
 	FsS \= [],
-	OutTrees = [tree([(S,FsS),([gap],_FsT)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB2,LeftTreeB2),gapTree)|Trees]. % For Position B = DI
-buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):- % For Position B = LI with no other chain links
-	OutTrees = [tree([(S,FsS),([gap],_FsT)],li(S,[=F|FsS]),gapTree)|Trees]. 
+	OutTrees = [tree([(S,FsS),([gap],_FsT)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB1,LeftTreeB2),gapTree)|Trees]. % For Position B = DI
+/* buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):- % For Position B = LI with no other chain links
+	OutTrees = [tree([(S,FsS),([gap],_FsT)],li(S,[=F|FsS]),gapTree)|Trees].  */
 buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):- % For Position B = LI
 	OutTrees = [tree([(S,FsS),([gap],_FsT)|_NewChains],li(S,[=F|FsS]),gapTree)|Trees]. 
-buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI with no other chain links
+/* buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI with no other chain links
 	checkCat(F),FsT \= [],
-	OutTrees = [tree([([gap],_FsS),(T,FsT)],gapTree,li(T,[ F|FsT]))|Trees]. 
+	OutTrees = [tree([([gap],_FsS),(T,FsT)],gapTree,li(T,[ F|FsT]))|Trees].  */
 buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI
 	checkCat(F),FsT \= [],
 	OutTrees = [tree([([gap],_FsS),(T,FsT)|_NewChains],gapTree,li(T,[ F|FsT]))|Trees]. 
-buildTree(lcMerge3,[tree([(T,[ F|FsT])|BetaChains],LeftTreeC2,LeftTreeC2)|Trees],OutTrees):- % For Position C = DI
+buildTree(lcMerge3,[tree([(T,[ F|FsT])|BetaChains],LeftTreeC1,LeftTreeC2)|Trees],OutTrees):- % For Position C = DI
 	checkCat(F),FsT \= [],
-	OutTrees = [tree([([gap],_FsS),(T,FsT)|_NewChains],gapTree,tree([(T,[ F|FsT])|BetaChains],LeftTreeC2,LeftTreeC2))|Trees]. 
-buildTree(lcMove,[tree([FChain|RsChain],LeftTreeB1,RightTreeB1)|Trees],OutTrees):- 
+	OutTrees = [tree([([gap],_FsS),(T,FsT)|_NewChains],gapTree,tree([(T,[ F|FsT])|BetaChains],LeftTreeC1,LeftTreeC2))|Trees]. 
+buildTree(lcMove,[tree([FChain|RsChain],LeftTreeB1,RightTreeB2)|Trees],OutTrees):- 
 	checkTreeMove(FChain,RsChain,NewChain),
-	OutTrees = [tree(NewChain,empty,tree([FChain|RsChain],LeftTreeB1,RightTreeB1))|Trees].
+	OutTrees = [tree(NewChain,empty,tree([FChain|RsChain],LeftTreeB1,RightTreeB2))|Trees].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % buildCTree(+Tree,+Tree,-Tree)
 %
