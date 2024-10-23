@@ -152,7 +152,7 @@ mergFunc((':',[ F|Delta]),[(T2,[=F|Gamma])|FsR],Links):- mergFunc((':',[ F|Delta
 mergFunc(('::',[=F|Gamma]),[(T2,[ F	   ])|FsR],Links) 	:- mergFunc((':',Gamma),[(T2,[ F	   ])|FsR],DeeperAs),
 		mergFunc(('::',[=F|Gamma]),FsR,DeeperLinks),
 		ord_union(DeeperAs,DeeperLinks,DLinks),
-		Links = [link('::',[=F|Gamma],Gamma)						 |DLinks].
+		Links = [link('::',[=F|Gamma],Gamma),link(T2,[F],Gamma)	 |DLinks].% anders als bei Stanojevic anzugleichen mit merge1 und X = C 
 mergFunc((':',[=F|Gamma]),[('::',[ F	   ])|FsR],Links) 	:- mergFunc((':',Gamma),[('::',[ F	   ])|FsR],DeeperAs),
 		mergFunc((':',[=F|Gamma]),FsR,DeeperLinks), % for merge 2
 		ord_union(DeeperAs,DeeperLinks,DLinks),
