@@ -3,11 +3,10 @@
 % origin author : J. Kuhn
 % origin date: April 2023
 % purpose: takes a list of tokens and a lexicon and generates a fitting derivation tree
-debugMode.	% comment this line, if debugMode should be off
+%debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % TODO: 
-%		- epsilon-LI erlauben
 %		- protocol the parse-steps as an option/default
 % MG with Semantics
 % merge   -> tree([([W],[Fs],L)],Subtree1,Subtree2)
@@ -57,6 +56,9 @@ debugMode:- false.
 % lcParse(+[Tokens],-[Trees]
 %
 % top most parse function to the outside
+% the current parser disallows the same prediction at the same time in the WS
+% this is done to prevent infinity, due to potential empty shifts
+% this is subject to change in the future if better preventions of infinity are found
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lcParse(Tokens,Tree):- 
 	loop(0,0,Tokens,[],[],[],OutWs,Tree),
@@ -81,9 +83,10 @@ loop(It,Pos,Input,Ws,InTree,OutPut,OutWs,OutTree):-
 	checkCN(It,WsRule,Ws,LI,InTree,DWs,DTree),% check if something clicks with WS;
 	(debugMode->write(It : " "),write("loop: new Ws: "),writeln(DWs);true),
 	(debugMode->write(It : " "),write("loop: new Tree: "),writeln(DTree);true),
-	parseF(It,RestPut,DWs,DTree,ParPut,InterWs,InterTree),
+	parseF(It,RestPut,DWs,DTree,ParPut,[HeadWs|InterWs],InterTree),
+	checkInfty(It,HeadWs,InterWs), % check to stop infinities
 	NewIt is It + 1,
-	loop(NewIt,NewPos,ParPut,InterWs,InterTree,OutPut,OutWs,OutTree).
+	loop(NewIt,NewPos,ParPut,[HeadWs|InterWs],InterTree,OutPut,OutWs,OutTree).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parseF(+Iteration,+[Tokens],+[WS],+[Trees],-[Tokens],-[WS],-[Trees])
@@ -132,6 +135,7 @@ parseMoloop(_,In,[pre(B,A)|Ws],Tree,In,[pre(B,A)|Ws],Tree).
 %		- shift von epsilon-LI erlauben
 %		- Auswahl des LI implementieren -> LINKS? Anfangsbedingung? etc.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 shift(It,Pos,[H|HRs],NewPos,HRs,WsRule,LI):- 
 	(debugMode->write(It : " "),write("shift: current position: "),writeln(Pos);true),
 	(debugMode->write(It : " "),write("shift: shifting: "),writeln(H);true),
@@ -142,7 +146,15 @@ shift(It,Pos,[H|HRs],NewPos,HRs,WsRule,LI):-
 	NewPos is (Pos + 1),
 	(debugMode->write(It : " "),write("shift: new position: "),writeln(NewPos);true),
 	makeWsRule(Pos,NewPos,LI,WsRule).
-
+shift(It,Pos,[H|HRs],Pos,[H|HRs],WsRule,LI):- % Regel für leere Ausdrücke
+	(debugMode->write(It : " "),write("shift: current position: "),writeln(Pos);true),
+	(debugMode->write(It : " "),write("shift: shifting: "),writeln(" ");true),
+	(debugMode->write(It : " "),write("shift: remaining: "),writeln([H|HRs]);true),
+	[] :: Fs, 
+	LI = li([],Fs),
+	(debugMode->write(It : " "),write("shift: LI: "),writeln(LI);true),
+	(debugMode->write(It : " "),write("shift: new position: "),writeln(Pos);true),
+	makeWsRule(Pos,Pos,LI,WsRule).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % makeWsRule(+[LI],-WsRule)
 %
@@ -352,7 +364,17 @@ appendExtensibleLists(L0,L1,L) :-
     ; var(Suffix1) -> append(Prefix,Suffix0,L2), append(L2,Suffix1,L)
     ; Suffix0=Suffix1, append(Prefix,Suffix1,L)
     ).
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% checkInfty(+It,+LCRule,+[LCRule])
+%
+% checks if a LC Rule is already in WS.
+% 	- fails if it is
+% 	- is there to prevent infinity, because of epsilon-LIs
+% 	- if better checks against infinity are needed, change this
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+checkInfty(_,_,[]).
+checkInfty(_,LCRule,[LCRule|_]):- !,false.
+checkInfty(It,LCRule,[_|Ws]):-checkInfty(It,LCRule,Ws).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Closure-Rules
@@ -643,7 +665,9 @@ buildCTree(tree(HeadB,LeftTree,RightTree),TreeC,OutTree):-
 % checks in the chains for the correct Chain item to move. SMC was already checked beforehand
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %checkTreeMove(Head,[],_):-!,write("Error: checkTreeMove: Found no Match for Move for: "), writeln(Head),false. % should never reach
-checkTreeMove(Head,[(_,[])|_],_):-!,write("Error: checkTreeMove: Found no Match for Move for: "), writeln(Head),false.
+checkTreeMove(Head,[(_,[])|_],_):-!,
+	(debugMode -> write("checkTreeMove: Found no Match for Move for: "), writeln(Head);true),
+	false.
 checkTreeMove((S,[+F|FsS]),[(T,[-F])|RsChain],NewChain):- 
 	append(T,S,TS), % move 1
 	NewChain = [(TS,FsS)|RsChain].
