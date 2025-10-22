@@ -14,12 +14,12 @@
 %
 % scan(+String,-[String_List])
 %
-% oberste Funktion, die einen String einliest und eine Liste an String-Tokens ausgibt
+% top most function of the scanner, reads a string and gives back a list of string-token
 %
-% NB: sollte noch alle Großbuchstaben am Anfang in Kleinbuchstaben umwandeln
-% TODO: sollte irgendwann den String nach den Exponenten in dem Lexikon aufteilen 
+% NB: should in the future change all upper case letters to lower case letters
+% TODO: to scan the exponents in a lexicon and checks if the read string has a pendant in the lexicon
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 scanInput("",[]).
-scanInput(Input, Output) :-  string(Input),split_string(Input," ","",OutString), maplist(atom_string,Output,OutString);
-						writeln("Bitte String eingeben"),false.
+scanInput(Input, Output) :-  string(Input),split_string(Input,",","",OutString), maplist(atom_string,Output,OutString);
+						writeln("Please write a string"),false.

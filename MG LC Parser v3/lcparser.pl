@@ -3,24 +3,24 @@
 % origin author : J. Kuhn
 % origin date: April 2023
 % purpose: takes a list of tokens and a lexicon and generates a fitting derivation tree
-debugMode.	% comment this line, if debugMode should be off
+
+%debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TODO: 
-%		- protocol the parse-steps as an option/default
 % MG with Semantics
 % merge   -> tree([([W],[Fs],L)],Subtree1,Subtree2)
 % move    -> tree([([W],[Fs],L)],empty   ,Subtree)
 % LexItem ->   li( [W],  [Fs], L)
-% Derived Item -> di([W],[Fs],L)
-% unspecified Item -> ti([W],[Fs],L)
+% Derived Item -> di([W],[Fs],L) - currently not used
+% unspecified Item -> ti([W],[Fs],L) - currently not used
 %
-% MG ohne Semantik
+% MG without Semantik
 % merge   -> tree([([W],[Fs])],Subtree1,Subtree2)
 % move    -> tree([([W],[Fs])],empty   ,Subtree)
 % LexItem ->   li( [W],  [Fs])
-% Derived Item -> di([W],[Fs])
-% unspecified Item -> ti([W],[Fs])
+% Derived Item -> di([W],[Fs]) - currently not used
+% unspecified Item -> ti([W],[Fs]) - currently not used
 %
 % Item forms used in Workspace (WS): 
 % cR(W,{::,:,*},Fs,(PosL,PosR),[chainL(W,Fs,PosCh)]) % Item with negative head feature
@@ -51,9 +51,9 @@ debugMode:- false.
 %			 "sieben,und,drei,ßig"
 %			 "drei"
 %			 "drei,hundert"
-%  Nutze \+ \+ zur Abfrage von Links ohne Variablen zu instanzieren
+%  Use \+ \+ to check the links without instanciating the variables
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% lcParse(+[Tokens],-[Trees]
+% lcParse(+[Tokens],-[Trees])
 %
 % top most parse function to the outside
 % the current parser disallows the same prediction at the same time in the WS
@@ -80,7 +80,7 @@ loop(It,Pos,Input,Ws,InTree,OutPut,OutWs,OutTree):-
 	shift(It,Pos,Input,NewPos,RestPut,WsRule,LI),	
 	(debugMode->write(It : " "),write("loop: new Ws-Rule: "),writeln(WsRule),
 	write(It : " "),write("loop: new Input: "),writeln(RestPut);true),
-	checkCN(It,WsRule,Ws,LI,InTree,DWs,DTree),% check if something clicks with WS;
+	checkCN(It,WsRule,Ws,LI,InTree,DWs,DTree),% check if something clicks within WS (Workspace);
 	(debugMode->write(It : " "),write("loop: new Ws: "),writeln(DWs);true),
 	(debugMode->write(It : " "),write("loop: new Tree: "),writeln(DTree);true),
 	parseF(It,RestPut,DWs,DTree,ParPut,[HeadWs|InterWs],InterTree),
@@ -93,7 +93,6 @@ loop(It,Pos,Input,Ws,InTree,OutPut,OutWs,OutTree):-
 %	
 % lc-parse function except shift. 
 % Finished Parse-Tree at the "Bottom"
-% NB: nachdenken ob ich die parseF-loop wirklich haben möchte
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 parseF(_,[],[cR(W,::,[F],Pos,[])],[li(W,[F])],[],[cR(W,::,[F],Pos,[])],[li(W,[F])]):- startCategory(F). % special end condition for Tree = 1 leaf
 parseF(_,[],[cR(W,:,[F],Pos,[])],Tree,[],[cR(W,:,[F],Pos,[])],Tree):- startCategory(F). % normal end condition
@@ -102,20 +101,19 @@ parseF(It,Input,[bR(W,T,Fs,PosB,Chain)|Ws],InTree,OutPut,OutWs,OutTree):-
 	(debugMode->write(It : " "),write("parseF: current Tree: "),writeln(InTree);true),
 	lc1(It,[bR(W,T,Fs,PosB,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 1
 	checkCN(It,LCRule,InterWs,LCTree,InterTree,DWs,DTree),% check if something clicks with WS;
-	parseMoloop(It,Input,DWs,DTree,OutPut,OutWs,OutTree).	%check if more lc(move)-Rules may aply
+	parseMoloop(It,Input,DWs,DTree,OutPut,OutWs,OutTree).	%check if more lc(move)-Rules may apply
 parseF(It,Input,[cR(W,T,Fs,PosC,Chain)|Ws],InTree,OutPut,OutWs,OutTree):- 
 	(debugMode->write(It : " "),write("parseF: current Ws: "),writeln([cR(W,T,Fs,PosC,Chain)|Ws]);true),
 	(debugMode->write(It : " "),write("parseF: current Tree: "),writeln(InTree);true),
 	lc2(It,[cR(W,T,Fs,PosC,Chain)|Ws],InTree,[LCRule|InterWs],[LCTree|InterTree]), % LC-Rules 2
-	checkCN(It,LCRule,InterWs,LCTree,InterTree,DWs,DTree),% check if something clicks with WS;
+	checkCN(It,LCRule,InterWs,LCTree,InterTree,DWs,DTree),% check if something clicks within WS;
 	parseMoloop(It,Input,DWs,DTree,OutPut,OutWs,OutTree).	%check if more lc(move)-Rules may aply
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parseMoloop(+Iteration,+[Tokens],+[WS],+[Trees],-[Tokens],-[WS],-[Trees])
 %	
 % loop for the parseF-Function to catch several moves un succession
-% NB: Anpassen dass nur Moves abgearbeitet werden, und der Rest durchkommt
-%	  illegale Moves führen zu einem Fail
+%	  illegal Moves (Shortes Movement Constraint) result in a Fail
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 parseMoloop(It,Input,[bR(W,T,Fs,PosB,Chain)|Ws],InTree,OutPut,OutWs,OutTree):- 
 	parseF(It,Input,[bR(W,T,Fs,PosB,Chain)|Ws],InTree,OutPut,OutWs,OutTree).
@@ -130,10 +128,6 @@ parseMoloop(_,In,[pre(B,A)|Ws],Tree,In,[pre(B,A)|Ws],Tree).
 % shift(+Iteration,+[Token],-[Token],-[WSRule],-[LI])
 % 
 % shifted the first Token of a list out and returns a corresponding LI
-% NB: 	- Vieleicht in Zukunft eine Präferenz für spezielle Fs einbauen
-%		- oder den Shift durch den Workspace vorsortieren
-%		- shift von epsilon-LI erlauben
-%		- Auswahl des LI implementieren -> LINKS? Anfangsbedingung? etc.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 shift(It,Pos,[H|HRs],NewPos,HRs,WsRule,LI):- 
@@ -146,7 +140,7 @@ shift(It,Pos,[H|HRs],NewPos,HRs,WsRule,LI):-
 	NewPos is (Pos + 1),
 	(debugMode->write(It : " "),write("shift: new position: "),writeln(NewPos);true),
 	makeWsRule(Pos,NewPos,LI,WsRule).
- shift(It,Pos,[H|HRs],Pos,[H|HRs],WsRule,LI):- % Regel für leere Ausdrücke
+shift(It,Pos,[H|HRs],Pos,[H|HRs],WsRule,LI):- % Regel für leere Ausdrücke
 	(debugMode->write(It : " "),write("shift: current position: "),writeln(Pos);true),
 	(debugMode->write(It : " "),write("shift: shifting: "),writeln(" ");true),
 	(debugMode->write(It : " "),write("shift: remaining: "),writeln([H|HRs]);true),
@@ -180,18 +174,16 @@ checkCat(_).
 % LC-Rules
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% lc1(+Iteration,+[WS],+[Tree],-[Tokens],-[WS],-[Tree])
+% lc1(+Iteration,+[WS],+[Tree],-[WS],-[Tree])
 % 
 %		-lc1(R); R = MG-Rule
-%		=> given R= R1 and a B is in WS: replace B for C -> A
+%		=> given R = R1 and a B is in WS: replace B for C -> A
 %			R1: - merge 1
 %				- merge 2
 %				- merge 3
 %		=> given R = R2 and a B: replace B for A
 %			R2:		- move 1
 %					- move 2
-%	NB:
-%		- nachdenken, ob SMC check nicht bei merge 3 sein sollte
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc1(It,[bR(S,::,[=F|FsS],(LB,RB),[])|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->write(It : " "),writeln("lc1: merge1");true),
@@ -200,7 +192,7 @@ lc1(It,[bR(S,::,[=F|FsS],(LB,RB),[])|Ws],InTree,OutWs,OutTree):-
 	append(S,T,ST),checkFsRule(ST,:,FsS,(LB,RC),AChain,ARule),
 	OutWs = [pre(cR(T,_Dot,[F],(RB,RC),CChain),ARule)|Ws],% merge 1
 	(debugMode->write(It : " "),write("lc1(me1): new WS: "),writeln(OutWs);true),
-	buildTree(lcMerge1,InTree,OutTree),
+	buildTree(lc1Merge1,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc1(me1): new Tree: "),writeln(OutTree);true).
 lc1(It,[bR(S,:,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 	% do/can we ever use this case?
 	(debugMode->write(It : " "),writeln("lc1: merge2");true),
@@ -209,7 +201,7 @@ lc1(It,[bR(S,:,[=F|FsS],(LB,RB),BChain)|Ws],InTree,OutWs,OutTree):- 	% do/can we
 	checkLink(pre(cR(T,Dot,[F],(LC,LB),CChain),ARule)),
 	OutWs = [pre(cR(T,Dot,[F],(LC,LB),CChain),ARule)|Ws],% merge 2
 	(debugMode->write(It : " "),write("lc1(me2): new WS: "),writeln(OutWs);true),
-	buildTree(lcMerge2,InTree,OutTree),
+	buildTree(lc1Merge2,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc1(me2): new Tree: "),writeln(OutTree);true).
 lc1(It,[bR(S,_,[=F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->write(It : " "),writeln("lc1(me3): merge3");true),
@@ -218,7 +210,7 @@ lc1(It,[bR(S,_,[=F|FsS],PosB,BChain)|Ws],InTree,OutWs,OutTree):-
 	checkLink(pre(cR(T,Dot,[F|FsT],PosC,CChain),ARule)),	% check if link exist
 	OutWs = [pre(cR(T,Dot,[F|FsT],PosC,CChain),ARule)|Ws], % merge 3
 	(debugMode->write(It : " "),write("lc1(me3): new WS: "),writeln(OutWs);true),
-	buildTree(lcMerge3,InTree,OutTree),
+	buildTree(lc1Merge3,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc1(me3): new Tree: "),writeln(OutTree);true).
 lc1(It,[bR(S,:,[+F|FsS],PosB,[BChain|RChain])|Ws],InTree,OutWs,OutTree):- 
 	(debugMode->write(It : " "),writeln("lc1: move");true),
@@ -226,7 +218,7 @@ lc1(It,[bR(S,:,[+F|FsS],PosB,[BChain|RChain])|Ws],InTree,OutWs,OutTree):-
 	checkMove(It,bR(S,:,[+F|FsS],PosB,[BChain|RChain]),[BChain|RChain],ARule), % move 1 + 2
 	OutWs = [ARule|Ws],
 	(debugMode->write(It : " "),write("lc1(mo): new WS: "),writeln(OutWs);true),
-	buildTree(lcMove,InTree,OutTree),
+	buildTree(lc1Move,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc1(mo): new Tree: "),writeln(OutTree);true).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -238,16 +230,15 @@ lc1(It,[bR(S,:,[+F|FsS],PosB,[BChain|RChain])|Ws],InTree,OutWs,OutTree):-
 %					- merge 3	
 %		aR is a placeholder
 %		because I do not know if the bR becomes a cR or bR
-%	NB: - LINK(X,Y)-Checkl einfügen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lc2(It,[cR(T,_,[ F],(LC,RC),CChain)|Ws],InTree,OutWs,OutTree):- 
 	checkCat(F),
 	append(T,S,TS),appendExtensibleLists(BChain,CChain,AChain),
 	(debugMode->write(It : " "),writeln("lc2: merge2");true),
 	checkLink(pre(bR(S,:,[=F|FsS],(RC,RB),BChain),aR(TS,:,FsS,(LC,RB),AChain))),
-	OutWs = [pre(bR(S,:,[=F|FsS],(RC,RB),BChain),aR(TS,:,FsS,(LC,RB),AChain))|Ws], 	% merge 2, because I do not know if the bR becomes a cR or bR, aR is a placeholder
+	OutWs = [pre(bR(S,:,[=F|FsS],(RC,RB),BChain),aR(TS,:,FsS,(LC,RB),AChain))|Ws], 	% merge 2; because I do not know if the bR becomes a cR or bR, aR is a placeholder
 	(debugMode->write(It : " "),write("lc2(me2): new WS: "),writeln(OutWs);true),
-	buildTree(lcMerge2,InTree,OutTree),
+	buildTree(lc2Merge2,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc2(me2): new Tree: "),writeln(OutTree);true).
 lc2(It,[cR(T,TT,[ F|FsT],PosC,CChain)|Ws],InTree,OutWs,OutTree):- 
 	checkCat(F),
@@ -255,15 +246,15 @@ lc2(It,[cR(T,TT,[ F|FsT],PosC,CChain)|Ws],InTree,OutWs,OutTree):-
 	checkLink(pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(S,:,FsS,PosB,AChain))),	% check if link exist
 	checkLink(pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(T,TT,FsT,PosC,CChain))),% check with dummy aR for new chain element
 	appendExtensibleLists(BChain,[chainL(T,FsT,PosC)|CChain],AChain),
-	OutWs = [pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(S,:,FsS,PosB,AChain))|Ws],	% merge 3, because I do not know if the bR becomes a cR or bR, aR is a placeholder
+	OutWs = [pre(bR(S,Dot,[=F|FsS],PosB,BChain),aR(S,:,FsS,PosB,AChain))|Ws],	% merge 3; because I do not know if the bR becomes a cR or bR, aR is a placeholder
 	(debugMode->write(It : " "),write("lc2(me3): new WS: "),writeln(OutWs);true),
-	buildTree(lcMerge3,InTree,OutTree),
+	buildTree(lc2Merge3,InTree,OutTree),
 	(debugMode->write(It : " "),write("lc2(me3): new Tree: "),writeln(OutTree);true).
 lc2(_,_,_,_,_) :- !,false.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkMove(+Iteration,+bR,+[chainLinks],-Rule)
 %
-% checks if any Moves can be done (legally)  
+% checks if any Moves can be done (legally -> SMC)  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 /* checkMove(_,[],_):-
 	(debugMode -> writeln("checkMove: nothing legal found");true),
@@ -308,7 +299,8 @@ checkFsRule(W,T,[ F|Fs],Pos,Chain,ARule):- \+ var(F),checkCat(F),ARule = cR(W,T,
 addChain(bR(W,Dot,Fs,Pos,Chain),ChainL,bR(W,Dot,Fs,Pos,[ChainL|Chain])).
 addChain(cR(W,Dot,Fs,Pos,Chain),ChainL,cR(W,Dot,Fs,Pos,[ChainL|Chain])).
 addChain(aR(W,Dot,Fs,Pos,Chain),ChainL,aR(W,Dot,Fs,Pos,[ChainL|Chain])).
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This following functions is taken whole sale from the implementation by Stanojevic
 % First, given a possibly partially uninstantiated list like
 %      L = [A,b,[C|D]|E]
 % we define splitExtensibleList so that
@@ -330,10 +322,12 @@ addChain(aR(W,Dot,Fs,Pos,Chain),ChainL,aR(W,Dot,Fs,Pos,[ChainL|Chain])).
 %      Prefix = [a,B]
 %      Suffix = []
 % In all cases, splitExtensibleList(L,P,S) implies append(P,S,L).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 splitExtensibleList(L,Prefix,Suffix) :- var(L), !, Prefix=[], Suffix=L.
 splitExtensibleList([H|T],[H|Prefix],Suffix) :- !, splitExtensibleList(T,Prefix,Suffix).
 splitExtensibleList([],[],[]).
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This following functions is taken whole sale from the implementation by Stanojevic
 % Now given 2 extensible lists
 %      L0 = [A,b,[C|D]|E]
 %      L1 = [f,G,e(f)|H]
@@ -349,7 +343,7 @@ splitExtensibleList([],[],[]).
 % Extending L0 is the same as extending L1.
 % Since we will only use this when appending Mover lists, we add a check to make
 % sure that the instantiated movers do not violate smc ...
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 appendExtensibleLists(L0,L1,L) :-
     splitExtensibleList(L0,Prefix0,Suffix0),
     splitExtensibleList(L1,Prefix1,Suffix1),
@@ -381,7 +375,6 @@ checkInfty(It,LCRule,[_|Ws]):-checkInfty(It,LCRule,Ws).
 %
 %	check if a CN-Rule can be applied, commit to the chosen checkCN
 %	LCRule: either a bR,cR,pre(bR,bR),pre(bR,cR),pre(bR,aR),pre(cR,bR),pre(cR,cR),pre(cR,aR)
-%	NB: LINK(X,Y)-Check einfügen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkCN(It,R,[],Tree,_,[R],[Tree]):- (debugMode->write(It : " "),writeln("checkCN: no cN-Rule ");true).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -481,7 +474,9 @@ checkCN(It,pre(CRule,cR(WN,T,[ F|FsN],(L,R),CNew)),[pre(cR(WWs,T,[ F|FsWs],(L,R)
 	(debugMode->write(It : " "),writeln("checkCN: c3");true);
 	OutWs = [DeepC2Rule|WSs],
 	OutTree = [DeepC2Tree|Trees]).
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% check the rest of the WS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 checkCN(It,LCRule,[WSItem|WSs],LCTree,[Tree|Trees],[DeepItem,WSItem|WSRest],[DeepTree,Tree|Forest]):- 
 	checkCN(It,LCRule,WSs,LCTree,Trees,[DeepItem|WSRest],[DeepTree|Forest]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -505,14 +500,15 @@ c0(_,BRule,pre(BRule,aR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|F
 	buildCTree(WsTree,LcTree,OutTree).
 c0(_,BRule,pre(BRule,cR(WWs,T,[ F|FsWs],(L,R),CWs)),LcTree,WsTree,cR(WWs,T,[ F|FsWs],(L,R),CWs),OutTree):-
 	checkCat(F),
+	write("c0: WsTree: "), writeln(WsTree), write("c0: LcTree: "),writeln(LcTree),
 	buildCTree(WsTree,LcTree,OutTree).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %	c1(+Iteration,+Pre(B,A),+Pre(C,B),+Tree,+Tree,-Pre(C,A),-Tree)
 %
 %	applies c1-Rule
-%	inherent unification of Prolog should fill in the Variables,
+%	inherent unification of Prolog should fill in the variables,
 %	otherwise I have to do the unification explicitly
-%	NB: hier gehen die Ketten von BRule flöten
+%	NB: the chains from BRule are dropped here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c1(It,pre(BRule,ARule),pre(CRule,BRule),LcTree,WsTree,DeepC1Rule,DeepC1Tree):-
 	DeepC1Rule = pre(CRule,ARule),
@@ -522,9 +518,9 @@ c1(It,pre(BRule,ARule),pre(CRule,BRule),LcTree,WsTree,DeepC1Rule,DeepC1Tree):-
 %	c2(+Iteration,+Pre(C,B),+Pre(B,A),+Tree,+Tree,-Pre(C,A),-Tree)
 %
 %	applies c2-Rule
-%	inherent unification of Prolog should fill in the Variables,
+%	inherent unification of Prolog should fill in the variables,
 %	otherwise I have to do the unification explicitly
-%	NB: hier gehen die Ketten von BRule flöten
+%	NB: the chains from BRule are dropped here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 c2(It,pre(CRule,BRule),pre(BRule,ARule),LcTree,WsTree,DeepC2Rule,DeepC2Tree):-
 	DeepC2Rule = pre(CRule,ARule),
@@ -593,71 +589,70 @@ checkLink(pre(bR(_,T,FsC,_,_),bR(_,_,FsA,_,_))):- !,
 % buildTree(+MG-Rule,+[Tree],-[Tree])
 %
 % constructs a tree out of the first element of the input tree list
-% gap is a placeholder for a yet unknown string in the exponent and
 % gapTree is a placeholder for a yet (partially) unknown subtree,
 % to make finding the gap in the tree easier
-% NB: 	- ggf. Ketten genauer bestimmen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-buildTree(lcMerge1,[li(S,[=F|FsS])|Trees],OutTrees):- % For position B = LI
-	FsS \= [],
-	append(S,[gap],SG),
-	OutTrees = [tree([(SG,FsS)|_NewChains],li(S,[=F|FsS]),gapTree)|Trees].	
-buildTree(lcMerge2,[tree([(S,[=F|FsS])|AlphaChains],LeftTreeB1,LeftTreeB2)|Trees],OutTrees):- % For position B = DI
-	OutTrees = [tree([([gap|S],FsS)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB1,LeftTreeB2),gapTree)|Trees]. 
-buildTree(lcMerge2,[li(T,[ F])|Trees],OutTrees):- % For position C = LI
-	checkCat(F),
-	append(T,[gap],TG),
-	OutTrees = [tree([(TG,_FsS)|_NewChains],gapTree,li(T,[ F]))|Trees].	
-buildTree(lcMerge2,[tree([(T,[ F])|BetaChains],LeftTreeC1,LeftTreeC2)|Trees],OutTrees):- % For position C = DI
-	checkCat(F),
-	append(T,[gap],TG),
-	OutTrees = [tree([(TG,_FsS)|_NewChains],gapTree,tree([(T,[ F]|BetaChains)],LeftTreeC1,LeftTreeC2))|Trees]. 
-buildTree(lcMerge3,[tree([(S,[=F|FsS]|AlphaChains)],LeftTreeB1,LeftTreeB2)|Trees],OutTrees):- 
+buildTree(lc1Merge1,[li(S,Fs)|Trees],OutTrees):- % For position B = LI
+	OutTrees = [tree(_Head,li(S,Fs),gapTree)|Trees].	
+buildTree(lc1Merge2,[tree(OldHead,LeftTreeB1,LeftTreeB2)|Trees],OutTrees):- % For position B = DI
+	OutTrees = [tree(_Head,tree(OldHead,LeftTreeB1,LeftTreeB2),gapTree)|Trees]. 
+buildTree(lc2Merge2,[li(T,Fs)|Trees],OutTrees):- % For position C = LI
+	OutTrees = [tree(_Head,gapTree,li(T,Fs))|Trees].	
+buildTree(lc2Merge2,[tree(OldHead,LeftTreeC1,LeftTreeC2)|Trees],OutTrees):- % For position C = DI
+	OutTrees = [tree(_Head,gapTree,tree(OldHead,LeftTreeC1,LeftTreeC2))|Trees]. 
+buildTree(lc1Merge3,[tree([(S,[=F|FsS]|AlphaChains)],LeftTreeB1,LeftTreeB2)|Trees],OutTrees):- 
 	FsS \= [],
 	OutTrees = [tree([(S,FsS),([gap],_FsT)|_NewChains],tree([(S,[=F|FsS])|AlphaChains],LeftTreeB1,LeftTreeB2),gapTree)|Trees]. % For Position B = DI
 /* buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):- % For Position B = LI with no other chain links
 	OutTrees = [tree([(S,FsS),([gap],_FsT)],li(S,[=F|FsS]),gapTree)|Trees].  */
-buildTree(lcMerge3,[li(S,[=F|FsS])|Trees],OutTrees):- % For Position B = LI
-	OutTrees = [tree([(S,FsS),([gap],_FsT)|_NewChains],li(S,[=F|FsS]),gapTree)|Trees]. 
+buildTree(lc1Merge3,[li(S,Fs)|Trees],OutTrees):- % For Position B = LI
+	OutTrees = [tree(_Head,li(S,Fs),gapTree)|Trees]. 
 /* buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI with no other chain links
 	checkCat(F),FsT \= [],
 	OutTrees = [tree([([gap],_FsS),(T,FsT)],gapTree,li(T,[ F|FsT]))|Trees].  */
-buildTree(lcMerge3,[li(T,[ F|FsT])|Trees],OutTrees):-  % For Position C = LI
-	checkCat(F),FsT \= [],
-	OutTrees = [tree([([gap],_FsS),(T,FsT)|_NewChains],gapTree,li(T,[ F|FsT]))|Trees]. 
-buildTree(lcMerge3,[tree([(T,[ F|FsT])|BetaChains],LeftTreeC1,LeftTreeC2)|Trees],OutTrees):- % For Position C = DI
-	checkCat(F),FsT \= [],
-	OutTrees = [tree([([gap],_FsS),(T,FsT)|_NewChains],gapTree,tree([(T,[ F|FsT])|BetaChains],LeftTreeC1,LeftTreeC2))|Trees]. 
-buildTree(lcMove,[tree([FChain|RsChain],LeftTreeB1,RightTreeB2)|Trees],OutTrees):- 
-	checkTreeMove(FChain,RsChain,NewChain),
-	OutTrees = [tree(NewChain,empty,tree([FChain|RsChain],LeftTreeB1,RightTreeB2))|Trees].
+buildTree(lc2Merge3,[li(T,Fs)|Trees],OutTrees):-  % For Position C = LI
+	OutTrees = [tree(_Head,gapTree,li(T,Fs))|Trees]. 
+buildTree(lc2Merge3,[tree(OldHead,LeftTreeC1,LeftTreeC2)|Trees],OutTrees):- % For Position C = DI
+	OutTrees = [tree(_Head,gapTree,tree(OldHead,LeftTreeC1,LeftTreeC2))|Trees]. 
+buildTree(lc1Move,[tree(OldHead,LeftTreeB1,RightTreeB2)|Trees],OutTrees):- 
+	%checkTreeMove(FChain,RsChain,NewChain),
+	OutTrees = [tree(_Head,empty,tree(OldHead,LeftTreeB1,RightTreeB2))|Trees].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % buildCTree(+Tree,+Tree,-Tree)
 %
 % builds a tree out of two trees that came from a prediction each
 % the first tree gets the second tree inserted at its gapTree-position
 % finding the gapTree works like depth-first search
-% NB: nachdenken ob ein anderer Suchansatz besser wäre, z.B. breadth-first
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-buildCTree(tree(HeadB,gapTree,tree(HeadBR,LeftTreeBR,RightTreeBR)),TreeC,OutTree):-
-	adjustRoot(HeadB,TreeC,NewHead),
-	OutTree = tree(NewHead,TreeC,tree(HeadBR,LeftTreeBR,RightTreeBR)).
-buildCTree(tree(HeadB,gapTree,li(W,F)),TreeC,OutTree):-
-	adjustRoot(HeadB,TreeC,NewHead),
-	OutTree = tree(NewHead,TreeC,li(W,F)).
-buildCTree(tree(HeadB,tree(HeadBR,LeftTreeBR,RightTreeBR),gapTree),TreeC,OutTree):-
-	adjustRoot(HeadB,TreeC,NewHead),
-	OutTree = tree(NewHead,tree(HeadBR,LeftTreeBR,RightTreeBR),TreeC).
-buildCTree(tree(HeadB,li(W,F),gapTree),TreeC,OutTree):-
-	adjustRoot(HeadB,TreeC,NewHead),
-	OutTree = tree(NewHead,li(W,F),TreeC).
-buildCTree(tree(HeadB,LeftTree,RightTree),TreeC,OutTree):-
+buildCTree(tree(Head,gapTree,RightTree),TreeC,OutTree):-
+	%adjustRoot(HeadB,TreeC,NewHead),
+	%(debugMode->write("buildCTree: head to add: "), writeln(Head);true),
+	(debugMode->write("buildCTree: tree to add: "), writeln(TreeC);true),
+	%(debugMode->write("buildCTree: new head: "), writeln(NewHead);true),
+	OutTree = tree(Head,TreeC,RightTree).
+buildCTree(tree(Head,LeftTree,gapTree),TreeC,OutTree):-
+	%adjustRoot(HeadB,TreeC,NewHead),
+	%(debugMode->write("buildCTree: head to add: "), writeln(Head);true),
+	(debugMode->write("buildCTree: tree to add: "), writeln(TreeC);true),
+	%(debugMode->write("buildCTree: new head: "), writeln(NewHead);true),
+	OutTree = tree(Head,LeftTree,TreeC).
+buildCTree(tree(Head,LeftTree,RightTree),TreeC,OutTree):-
 	(buildCTree(LeftTree,TreeC,DeepLeft),% see if gap is on the left subtree
-	adjustHRoot(HeadB,DeepLeft,TreeC,NewHead),
-	OutTree = tree(NewHead,DeepLeft,RightTree);
+	(debugMode->writeln("buildCTree: gap is left");true),
+	(debugMode->write("buildCTree: left Tree: "), writeln(LeftTree);true),
+	(debugMode->write("buildCTree: tree to add: "), writeln(TreeC);true),
+	(debugMode->write("buildCTree: new left Tree: "), writeln(DeepLeft);true),
+	%adjustHRoot(Head,DeepLeft,TreeC,NewHead),
+	%(debugMode->write("buildCTree: new head: "), writeln(NewHead);true),
+	OutTree = tree(Head,DeepLeft,RightTree);
 	buildCTree(RightTree,TreeC,DeepRight),% see if gap is on the right subtree
-	adjustHRoot(HeadB,DeepRight,TreeC,NewHead),
-	OutTree = tree(NewHead,LeftTree,DeepRight)).
+	(debugMode->writeln("buildCTree: gap is right");true),
+	(debugMode->write("buildCTree: right Tree: "), writeln(RightTree);true),
+	(debugMode->write("buildCTree: tree to add: "), writeln(TreeC);true),
+	(debugMode->write("buildCTree: new right deep: "), writeln(DeepRight);true),
+	%adjustHRoot(HeadB,DeepRight,TreeC,NewHead),
+	%(debugMode->write("buildCTree: new head: "), writeln(NewHead);true),
+	OutTree = tree(Head,LeftTree,DeepRight)).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % checkTreeMove(+ChainItem,+[ChainItems],-[ChainItems])
 %
@@ -679,7 +674,7 @@ checkTreeMove(FChain,[KChain|RsChain],NewChain):- checkTreeMove(FChain,RsChain,[
 % adjustRoot(+[(Exp,Fs)],+tree,-NewHead)
 %
 % incorporates the new insertion into the root of the (sub-)tree
-% NB: denk über Features nochmal nach
+% not used anymore
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 adjustRoot([(WB,F)|ChB],tree([(WC,_)|ChC],_,_),NewHead):-
 	insertExp(WB,WC,WA),
@@ -693,7 +688,7 @@ adjustRoot([(WB,F)|ChB],li(WC,_),NewHead):-
 % adjustHRoot(+[(Exp,Fs)],+tree,+tree,-NewHead)
 %
 % special variant of adjustRoot, that only differs in the expression
-% NB: denk über Features nochmal nach
+% not used anymore
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 adjustHRoot([(WB,F)|ChB],tree([(_,_)|ChC],_,_),TreeC,NewHead):-
 	getExp(TreeC,Exp),
@@ -709,6 +704,7 @@ adjustHRoot([(WB,F)|ChB],li(_,_),TreeC,NewHead):-
 %
 % inserts the second string at the position of the gap-placeholder
 % in the first string
+% not used anymore
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %insertExp([gap],WC,WC).
 insertExp([gap|Tail],WC,WA):- append(WC,Tail,WA).
