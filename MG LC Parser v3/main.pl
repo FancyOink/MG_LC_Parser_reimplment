@@ -33,13 +33,16 @@ getLinks(L):- setof(link(T,X,Y),link(T,X,Y),L),
 	(mainDebug->writeln(L);true).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Hauptfunktion des Parsers
+% Main function of the lc-parser
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 parse(Input,Tree):- 
 			scanInput(Input,TokenList),
-			(mainDebug-> write("parse: Tokenliste: "),writeln(TokenList);true),
+			(mainDebug-> write("parse: Token-list: "),writeln(TokenList);true),
 			!, % Cut to prevent unneccessary backtracking to Scanner, if unsuccsessfull parse
-			lcParse(TokenList,Tree).
+			lcParse(TokenList,[ParseTree]),
+			(mainDebug-> write("parse: Derivation Tree: "),writeln(ParseTree);true),
+			workSpace(ParseTree,Tree),
+			tree_painter(Tree).
 			%makeLambda(Tree,Lambda). % TODO: Hier später Tree -> MGTree
 
 
