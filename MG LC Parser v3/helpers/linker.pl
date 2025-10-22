@@ -7,7 +7,7 @@
 :- op(500, xfy, ::). % infix predicate for lexical items
 :- op(500, fx, =). % for selection features
 
-%debugMode.	% comment this line, if debugMode should be off
+debugMode.	% comment this line, if debugMode should be off
 debugMode:- false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -35,7 +35,7 @@ debugMode:- false.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Links: link(T,[Fs_1],[Fs_2])
-%		 T	  -> Type of the Item
+%		 T	  -> Type of the Item {:} or {::}
 %		 Fs_1 -> Feature list of the first linking partner
 %		 Fs_2 -> Feature list of the second linking partner
 %
@@ -119,9 +119,6 @@ tryMergLinks([FsB|FsR],L,LinksR1):-
 %
 % makes Links for Merge-Rules depending on the Feature-lists provided
 % finds even merges inside of Feature-lists (Merge 2 and merge 1/3 with negative features from DI)
-% NB: nachdenken, ob ich hier schon DI zulasse
-% 	  den zweiten Item alle Features durchgehen lassen, bevor zum nächten Item gegangen wird?
-%	  eine unterteilung von negativer und positiver Liste und dann nochmal Links erstellen lasse
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mergFunc((_,[]),_,[]).
 mergFunc(_,[],[]).
@@ -168,13 +165,9 @@ mergFunc(('::',[=F|Gamma]),[(T2,[ F|Delta])|FsR],Links) :- mergFunc((':',Gamma),
 mergFunc(FsB			,[(_ ,[_ |Gamma])|FsR],Links):- mergFunc(FsB,[(':',Gamma)|FsR],Links).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% movFunc(+link(T,[Fs],[Fs],-[link(T,[Fs],[Fs])])
+% movFunc(+link(T,[Fs],[Fs]),-[link(T,[Fs],[Fs])])
 %
 % makes Links for Move-Rules depending on the Links provided
-% NB: nachdenken, ob ich hier schon DI zulasse
-%	  den zweiten Item alle Features durchgehen lassen, bevor zum nächten Item gegangen wird?
-%	  eine unterteilung von negativer und positiver Liste und dann nochmal Links erstellen lasse
-% ich finde nur das erste match einer Featureliste rechts
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 movFunc(link('::',[H,-F],[+F|Gamma]),[link('::',[H,-F],Gamma),link(':',[-F],Gamma)]).
 movFunc(link(':',[H,-F],[+F|Gamma]),[link(':',[H,-F],Gamma),link(':',[-F],Gamma)]).  
@@ -195,8 +188,6 @@ movFunc(_,[]).
 % getAllPotClos(+[link(T,[FsB],[FsA])],-[(T,B) - [(TA,A)]])
 % 
 % finds all connections from FsB to FsA
-% NB: uU werden zu viele Listen generiert, die nachher zwar 
-% 	  rausgefiltert werden, aber mehr als nötig OPs brauchen
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 getAllPotClos([],[]).
 getAllPotClos([link(T,FsB,_)|LRs],PotClos):-
